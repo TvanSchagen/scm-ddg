@@ -1,4 +1,6 @@
 ﻿using System;
+using MySql.Data;
+using MySql.Data.MySqlClient;
 
 namespace DummyDataGenerator
 {
@@ -10,31 +12,18 @@ namespace DummyDataGenerator
 
 		static void Main(string[] args)
 		{
-			Console.WriteLine("Welcome to Supply Chain Dummy Data Generator");
-			Console.WriteLine("Choose for which kind of database you would like to generate dummy data:\n "
-				+ "\tM\tMySQL\n"
-				+ "\tN\tNeo4j\n");
-			switch(Console.ReadKey().Key)
-			{
-				case ConsoleKey.M:
-					HandleMySQL();
-					break;
-				case ConsoleKey.N:
-					HandleNeo4j();
-					break;
-			}
-		}
-
-		private static void HandleNeo4j()
-		{
-			throw new NotImplementedException();
-		}
-
-		private static void HandleMySQL()
-		{
-			int numberOfChains = ReadInt("Please enter the number of chains:", DEFAULT_NO_OF_CHAINS);
-			int chainDepth = ReadInt("Please enter the chain depth:", DEFAULT_CHAIN_DEPTH);
-			GenerateMySQLDummyData(chainDepth, numberOfChains);
+			Configuration conf = new Configuration(
+				ReadInt("number of chains: ", 100),
+				ReadInt("chain depth: ", 100),
+				ReadInt("activities: ", 100),
+				ReadInt("suppliers: ", 100),
+				ReadInt("products: ", 100)
+			);
+			MySqlDummy m = new MySqlDummy();
+			m.InitializeConnection();
+			m.GenerateData(conf);
+			m.CloseConnection();
+			Console.ReadLine();
 		}
 
 		private static int ReadInt(string message, int defaultInput)
@@ -50,35 +39,6 @@ namespace DummyDataGenerator
 				return defaultInput;
 			}
 			return result;
-		}
-
-		private static void GenerateMySQLDummyData(int chainDepth, int numberOfChains)
-		{
-			Console.WriteLine("Generating dummy data for MySQL..");
-			Console.ReadLine();
-		}
-
-		void GenerateSuppliers(int numberOfSuppliers)
-		{
-			// generate a number of suppliers and fill the neccessary fields
-		}
-
-		void GenerateActivities()
-		{
-			// generate a number of activities and fill the necessary fields
-		}
-
-		void GenerateProducts()
-		{
-			// generate a number of products and fill the necessary fields
-		}
-
-		void GenerateSupplierActivityProductRelations()
-		{
-			/*	1.	grab a non-used supplier (with activity retailer) and pick them as the first tier -> supplies to nobody
-				2.	
-				
-			*/
 		}
 
 	}
