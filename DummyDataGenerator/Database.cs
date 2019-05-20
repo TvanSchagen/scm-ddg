@@ -35,5 +35,6 @@ namespace DummyDataGenerator
 			this.NumberOfActivities = numberOfActivities;
 			this.NumberOfProducts = numberOfProducts;
         }
+
     }
 }
