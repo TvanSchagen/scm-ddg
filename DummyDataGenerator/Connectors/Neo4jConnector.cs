@@ -23,7 +23,7 @@ namespace DummyDataGenerator.Connectors
 		{
 			try
 			{
-				driver = GraphDatabase.Driver("bolt://localhost:7687", AuthTokens.Basic(Program.NEO4J_DATABASE_NAME, "teun1996"));
+				driver = GraphDatabase.Driver("bolt://localhost:7687", AuthTokens.Basic(Program.NEO4J_DATABASE_NAME, Program.NEO4J_PASSWORD));
 				Console.WriteLine("Opened Neo4j connection");
 			}
 			catch (Neo4jException e)

@@ -5,6 +5,7 @@ using System.Text;
 using DummyDataGenerator.Connectors;
 using MySql.Data;
 using MySql.Data.MySqlClient;
+// add fakedata generator
 
 namespace DummyDataGenerator
 {
@@ -35,18 +36,18 @@ namespace DummyDataGenerator
 			Console.WriteLine("Done..");
         }
 
-		private void GenerateSuppliesRelation()
+		private void RefreshDatabaseSchema()
 		{
-			
-		}
-
-		private void AssignSuppliesRelationToProducts()
-		{
-			
-		}
-
-		private void GenerateProductHierarchies(int numberOfChains)
-		{
+			MySqlScript script = new MySqlScript(connector.Connection, File.ReadAllText("mysql_generate_schema.sql"));
+			try
+			{
+				Console.WriteLine("Executing refresh schema script..");
+				script.Execute();
+			}
+			catch (MySqlException e)
+			{
+				Console.WriteLine("An error ocurred executing the refresh schema script: " + e);
+			}
 
 		}
 
@@ -80,20 +81,21 @@ namespace DummyDataGenerator
 			}
 		}
 
-		private void RefreshDatabaseSchema()
+		private void GenerateSuppliesRelation()
 		{
-			MySqlScript script = new MySqlScript(connector.Connection, File.ReadAllText("mysql_generate_schema.sql"));
-			try
-			{
-				Console.WriteLine("Executing refresh schema script..");
-				script.Execute();
-			}
-			catch (MySqlException e)
-			{
-				Console.WriteLine("An error ocurred executing the refresh schema script: " + e);
-			}
-			
+
 		}
+
+		private void AssignSuppliesRelationToProducts()
+		{
+
+		}
+
+		private void GenerateProductHierarchies(int numberOfChains)
+		{
+
+		}
+
     }
 
 }

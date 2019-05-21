@@ -10,7 +10,10 @@ namespace DummyDataGenerator
 		public const int DEFAULT_CHAIN_DEPTH = 10;
 		public const int DEFAULT_NO_OF_CHAINS = 100;
 		public const string MYSQL_DATABASE_NAME = "scm_test_dummy_generated_v2";
+		public const string MYSQL_USER = "root";
+		public const string MYSQL_PASSWORD = "teun1996";
 		public const string NEO4J_DATABASE_NAME = "scm_test_graph_dummydata";
+		public const string NEO4J_PASSWORD = "teun1996";
 
 		static void Main(string[] args)
 		{
@@ -41,8 +44,11 @@ namespace DummyDataGenerator
 				ChooseDatabase(conf, Console.ReadKey().Key);
 				return;
 			}
+			Console.WriteLine("Initializing connection");
 			database.InitializeConnection();
+			Console.WriteLine("Attempting to generate data");
 			database.GenerateData(conf);
+			Console.WriteLine("Closing connection");
 			database.CloseConnection();
 		}
 
