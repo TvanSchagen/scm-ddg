@@ -9,43 +9,42 @@ using MySql.Data.MySqlClient;
 
 namespace DummyDataGenerator
 {
-    class MySqlGenerator : Database
-    {
+	class MySqlGenerator : Database
+	{
 
-        MySqlConnector connector;
+		MySqlConnector connector;
 
 		/// <summary>
 		/// Initializes the singleton connection
 		/// </summary>
-        public override void InitializeConnection()
-        {
+		public override void InitializeConnection()
+		{
 			connector = MySqlConnector.Instance();
-        }
+		}
 
 		/// <summary>
 		/// Closes the singleton connection
 		/// </summary>
-        public override void CloseConnection()
-        {
+		public override void CloseConnection()
+		{
 			connector.Close();
-        }
+		}
 
 		/// <summary>
 		/// Generates the data with the specified parameters of the configuration
 		/// </summary>
 		/// <param name="config">The configuration that holds the paremeters for the data</param>
-        public override void GenerateData(Configuration config)
-        {
+		public override void GenerateData(Configuration config)
+		{
 			RefreshDatabaseSchema();
 			int[] tlOrgs = GenerateTopLevelOrganizations(config.NumberOfTopLevelSuppliers);
 			int[] orgs = GenerateOrganizations(config.NumberOfSuppliers);
 			int[] acts = GenerateActivities(config.NumberOfActivities);
 			GenerateProductTrees(tlOrgs, config.NumberOfProducts, config.ChainDepth, config.ChainBreadth);
-			/*
-			AddOrganizationsAndActivitiesToProductTree();
-			*/
+			AddOrganizationsAndActivitiesToProductTree(config.NumberOfSuppliers, config.NumberOfTopLevelSuppliers, config.NumberOfActivities, config.NumberOfProducts);
+			AddMetaData(config);
 			Console.WriteLine("Done..");
-        }
+		}
 
 		/// <summary>
 		/// Drops and creates the database, as to start off with a clean sheet
@@ -79,7 +78,7 @@ namespace DummyDataGenerator
 				string statement = "INSERT INTO organization(name) VALUES(" + "'TopLevelOrganization #" + (i + 1).ToString() + "');";
 				MySqlCommand com = new MySqlCommand(statement, connector.Connection);
 				com.ExecuteNonQuery();
-				result.Add((int) com.LastInsertedId);
+				result.Add((int)com.LastInsertedId);
 			}
 			watch.Stop();
 			Console.WriteLine("Took " + watch.ElapsedMilliseconds + "ms to generate " + result.Count + " top level organisations");
@@ -100,7 +99,7 @@ namespace DummyDataGenerator
 				string statement = "INSERT INTO organization(name) VALUES(" + "'Organization #" + (i + 1).ToString() + "');";
 				MySqlCommand com = new MySqlCommand(statement, connector.Connection);
 				com.ExecuteNonQuery();
-				result.Add((int) com.LastInsertedId);
+				result.Add((int)com.LastInsertedId);
 			}
 			watch.Stop();
 			Console.WriteLine("Took " + watch.ElapsedMilliseconds + "ms to generate " + result.Count + " organisations");
@@ -150,7 +149,7 @@ namespace DummyDataGenerator
 					//Console.WriteLine("Generating for product: " + j);
 
 					// generate the top level product
-					string statement = "INSERT INTO product(name) VALUES(" + "'Top Level Product #" + (j + 1).ToString() + "');";
+					string statement = "INSERT INTO product(name) VALUES(" + "'Top Level Product #o" + (i + 1) + "-p" + (j + 1).ToString() + "');";
 					MySqlCommand com = new MySqlCommand(statement, connector.Connection);
 					com.ExecuteNonQuery();
 					int topLevelId = (int)com.LastInsertedId;
@@ -167,15 +166,15 @@ namespace DummyDataGenerator
 							previousResults.Add(topLevelId);
 							// Console.WriteLine("First loop {0}, {1}, {2}", organizationIdentifiers[i], string.Join(",", previousResults), breadthPerLevel);
 							previousResults = GenerateProductRowAndRelations(i, previousResults, breadthPerLevel);
-							
+
 						}
 						// in subsequent passes, take the previous row of products and generate a new underlying row for all of them
 						else
 						{
 							previousResults = GenerateProductRowAndRelations(i, previousResults, breadthPerLevel);
-							// Console.WriteLine("Second loop {0}, {1}, {2} ", organizationIdentifiers[i], string.Join(",", previousResults), breadthPerLevel);
+							// Console.WriteLine("Second loop {0}, {1}, {2}", organizationIdentifiers[i], string.Join(",", previousResults), breadthPerLevel);
 						}
-						
+
 					}
 				}
 			}
@@ -205,7 +204,7 @@ namespace DummyDataGenerator
 					//Console.WriteLine("Generating for breadth " + j);
 
 					// generate product
-					string statement = "INSERT INTO product(name) VALUES(" + "'Product #c" + (chainId+) + "-p" + (i+1) + "-b" + (j+1) + "');";
+					string statement = "INSERT INTO product(name) VALUES(" + "'Product #c" + (chainId + 1) + "-p" + (i + 1) + "-b" + (j + 1) + "');";
 					MySqlCommand com = new MySqlCommand(statement, connector.Connection);
 					com.ExecuteNonQuery();
 					int childProductId = (int)com.LastInsertedId;
@@ -224,13 +223,62 @@ namespace DummyDataGenerator
 		}
 
 		/// <summary>
-		/// Adds organizations to all of the products
+		/// Adds organizations and activities to all the products in the database
 		/// </summary>
-		private void AddOrganizationsAndActivitiesToProductTree()
+		/// <param name="numberOfOrganizations">the total number of organizations specified</param>
+		/// <param name="numberOfActivites">the total number of activities specified</param>
+		/// <param name="numberOfProducts">the total number of products specified</param>
+		private void AddOrganizationsAndActivitiesToProductTree(int numberOfOrganizations, int numberOfTopLevelOrganizations, int numberOfActivites, int numberOfProducts)
 		{
+			int count = 0;
+			string statement = "SELECT COUNT(*) FROM product";
+			MySqlCommand com = new MySqlCommand(statement, connector.Connection);
+			object result = com.ExecuteScalar();
+			if (result != null)
+			{
+				count = Convert.ToInt32(result);
+			}
+			else
+			{
+				throw new Exception("Could not return count!");
+			}
 
+			for (int i = 0; i < count; i++)
+			{
+				string statement2 = string.Format("INSERT INTO supplies(organization_id, activity_id, product_id) VALUES({0}, {1}, {2});",
+					// add an offset of the toplevel suppliers, which are added first to the database, then modulo if the n.o. products outnumbers the n.o. organizations
+					((i + numberOfTopLevelOrganizations) % numberOfOrganizations) + 1,
+					// modulo if the n.o.products outnumbers the n.o. activities
+					(i % numberOfActivites) + 1,
+					// use the iterator as the product id
+					i + 1);
+				Console.WriteLine(statement2);
+				MySqlCommand com2 = new MySqlCommand(statement2, connector.Connection);
+				com2.ExecuteNonQuery();
+			}
 		}
 
-    }
+		/// <summary>
+		/// Adds metadata to a separate table in the database
+		/// </summary>
+		/// <param name="config">The supplied configuration</param>
+		void AddMetaData(Configuration config)
+		{
+			string statement = "DROP TABLE IF EXISTS `db_meta`; CREATE TABLE `db_meta` (`meta_name` VARCHAR(50), `meta_value` VARCHAR(50)) ENGINE=InnoDB;";
+			MySqlCommand com = new MySqlCommand(statement, connector.Connection);
+			com.ExecuteNonQuery();
+
+			string statement2 = string.Format("INSERT INTO db_meta(meta_name, meta_value) VALUES('NumberOfActivities', '{0}'), ('NumberOfProducts', '{1}'), ('NumberOfSuppliers', '{2}'), ('NumberOfTopLevelSuppliers', '{3}'), ('ChainBreadth', '{4}'), ('ChainDepth', '{5}')", 
+				config.NumberOfActivities, 
+				config.NumberOfProducts, 
+				config.NumberOfSuppliers, 
+				config.NumberOfTopLevelSuppliers, 
+				config.ChainBreadth, 
+				config.ChainDepth);
+			MySqlCommand com2 = new MySqlCommand(statement2, connector.Connection);
+			com2.ExecuteNonQuery();
+		}
+
+	}
 
 }
