@@ -14,11 +14,17 @@ namespace DummyDataGenerator
 
         MySqlConnector connector;
 
+		/// <summary>
+		/// Initializes the singleton connection
+		/// </summary>
         public override void InitializeConnection()
         {
 			connector = MySqlConnector.Instance();
         }
 
+		/// <summary>
+		/// Closes the singleton connection
+		/// </summary>
         public override void CloseConnection()
         {
 			connector.Close();
@@ -62,7 +68,8 @@ namespace DummyDataGenerator
 		/// <summary>
 		/// Generates a set number of top level organizations; organizations that do not supply any others
 		/// </summary>
-		/// <param name="organizations"></param>
+		/// <param name="organizations">The number of organiations</param>
+		/// <returns>a list of generated organization ids</returns>
 		private int[] GenerateTopLevelOrganizations(int organizations)
 		{
 			List<int> result = new List<int>();
@@ -82,7 +89,8 @@ namespace DummyDataGenerator
 		/// <summary>
 		/// Generatea a set number of organizations to be used during the tree generation
 		/// </summary>
-		/// <param name="organizations"></param>
+		/// <param name="organizations">The number of organiations</param>
+		/// <returns>a list of generated organization ids</returns>
 		private int[] GenerateOrganizations(int organizations)
 		{
 			List<int> result = new List<int>();
@@ -103,6 +111,7 @@ namespace DummyDataGenerator
 		/// Generatea a set number of activities to be used during tree generation
 		/// </summary>
 		/// <param name="activites">The number of activities to be generated</param>
+		/// <returns>a list of generated activity ids</returns>
 		private int[] GenerateActivities(int activites)
 		{
 			List<int> result = new List<int>();
@@ -133,12 +142,12 @@ namespace DummyDataGenerator
 			// for each top level supplier
 			for (int i = 0; i < organizationIdentifiers.Length; i++)
 			{
-				Console.WriteLine("Generating for Organization: " + organizationIdentifiers[i]);
+				Console.WriteLine("Generating for Organization: " + i);
 
 				// for each of their products
 				for (int j = 0; j < productsPerSupplier; j++)
 				{
-					Console.WriteLine("Generating for product: " + j);
+					//Console.WriteLine("Generating for product: " + j);
 
 					// generate the top level product
 					string statement = "INSERT INTO product(name) VALUES(" + "'Top Level Product #" + (j + 1).ToString() + "');";
@@ -146,26 +155,25 @@ namespace DummyDataGenerator
 					com.ExecuteNonQuery();
 					int topLevelId = (int)com.LastInsertedId;
 
+					List<int> previousResults = new List<int>();
 					// for the depth of the chain
 					for (int k = 0; k < depth; k++)
 					{
-						Console.WriteLine("Generating for depth: " + k);
-
-						int[] topLeveLProductId = new int[1];
-						topLeveLProductId[0] = topLevelId;
-
-						List<int> previousResults = new List<int>();
+						//Console.WriteLine("Generating for depth: " + k);
 
 						// in the first pass, generate the products for our top level product
 						if (k == 0)
 						{
-							Console.WriteLine("First loop");
-							previousResults = GenerateProductRowAndRelations(organizationIdentifiers[i], topLeveLProductId, breadthPerLevel);
+							previousResults.Add(topLevelId);
+							// Console.WriteLine("First loop {0}, {1}, {2}", organizationIdentifiers[i], string.Join(",", previousResults), breadthPerLevel);
+							previousResults = GenerateProductRowAndRelations(i, previousResults, breadthPerLevel);
+							
 						}
 						// in subsequent passes, take the previous row of products and generate a new underlying row for all of them
 						else
 						{
-							previousResults = GenerateProductRowAndRelations(organizationIdentifiers[i], previousResults.ToArray(), breadthPerLevel);
+							previousResults = GenerateProductRowAndRelations(i, previousResults, breadthPerLevel);
+							// Console.WriteLine("Second loop {0}, {1}, {2} ", organizationIdentifiers[i], string.Join(",", previousResults), breadthPerLevel);
 						}
 						
 					}
@@ -177,32 +185,40 @@ namespace DummyDataGenerator
 		}
 
 		/// <summary>
-		/// Adds a single row of products in a product tree
+		/// Adds a single row to a single product hierarchy
 		/// </summary>
-		/// <param name="parentProductIdentifier"></param>
-		private List<int> GenerateProductRowAndRelations(int chainId, int[] parentProductIdentifiers, int breadthPerLevel)
+		/// <param name="chainId">an identifier for a chain, to more clearly identify the products associated to this chain in the database</param>
+		/// <param name="parentProductIdentifiers">the list of parent products for which a number of child products has to be generated</param>
+		/// <param name="breadthPerLevel">the number of child products that have to be generated per parent product</param>
+		/// <returns>a list of the id's of the child products that have been created</returns>
+		private List<int> GenerateProductRowAndRelations(int chainId, List<int> parentProductIdentifiers, int breadthPerLevel)
 		{
 			List<int> childProductsCreated = new List<int>();
-			for (int i = 0; i < parentProductIdentifiers.Length; i++)
+			// Console.WriteLine("parentProductIds length: " + parentProductIdentifiers.Count);
+			int i = 0;
+			foreach (int item in parentProductIdentifiers)
 			{
-				Console.WriteLine("Generating for Parent Product: " + parentProductIdentifiers[i]);
+				//Console.WriteLine("Generating for Parent Product: " + parentProductIdentifiers[i]);
 
 				for (int j = 0; j < breadthPerLevel; j++)
 				{
-					Console.WriteLine("Generating for breadth " + j);
+					//Console.WriteLine("Generating for breadth " + j);
 
 					// generate product
-					string statement = "INSERT INTO product(name) VALUES(" + "'Product #" + chainId + "-" + i + "-" + j + "');";
+					string statement = "INSERT INTO product(name) VALUES(" + "'Product #c" + (chainId+) + "-p" + (i+1) + "-b" + (j+1) + "');";
 					MySqlCommand com = new MySqlCommand(statement, connector.Connection);
 					com.ExecuteNonQuery();
 					int childProductId = (int)com.LastInsertedId;
+					// Console.WriteLine("Added product " + childProductId);
 					childProductsCreated.Add(childProductId);
+					// Console.WriteLine("List length " + childProductsCreated.Count);
 
 					// add the product into the hierarchy
 					string statement2 = "INSERT INTO consists_of(parent_product_id, child_product_id) VALUES(" + parentProductIdentifiers[i] + "," + childProductId + ");";
 					MySqlCommand com2 = new MySqlCommand(statement2, connector.Connection);
 					com2.ExecuteNonQuery();
 				}
+				i++;
 			}
 			return childProductsCreated;
 		}

@@ -17,8 +17,6 @@ namespace DummyDataGenerator
     public class Configuration
     {
 
-		public int NumberOfChains { get; }
-
 		public int ChainDepth { get; }
 
 		public int NumberOfActivities { get; }
@@ -32,9 +30,8 @@ namespace DummyDataGenerator
 		public int ChainBreadth { get; }
 
 
-		public Configuration(int numberOfChains, int chainDepth, int chainBreadth, int numberOfActivities, int numberOfSuppliers, int numberOfTopLevelSuppliers, int numberOfProducts)
+		public Configuration(int chainDepth, int chainBreadth, int numberOfActivities, int numberOfSuppliers, int numberOfTopLevelSuppliers, int numberOfProducts)
         {
-            this.NumberOfChains = numberOfChains;
             this.ChainDepth = chainDepth;
 			this.ChainBreadth = chainBreadth;
 			this.NumberOfSuppliers = numberOfSuppliers;

@@ -26,13 +26,12 @@ namespace DummyDataGenerator
 		{
 			Console.WriteLine("Enter parameters (leave blank for default):");
 			Configuration conf = new Configuration(
-				ReadInt("number of chains: ", DEFAULT_NO_OF_CHAINS),
 				ReadInt("chain depth: ", DEFAULT_CHAIN_DEPTH),
 				ReadInt("chain breadth: ", DEFAULT_CHAIN_BREADTH),
 				ReadInt("activities: ", DEFAULT_NO_OF_ACTIVITIES),
 				ReadInt("suppliers: ", DEFAULT_NO_OF_SUPPLIERS),
 				ReadInt("top level suppliers: ", DEFAULT_NO_OF_TOPLEVELSUPPLIERS),
-				ReadInt("products: ", DEFAULT_NO_OF_PRODUCTS)
+				ReadInt("products per top level supplier: ", DEFAULT_NO_OF_PRODUCTS)
 			);
 			Console.WriteLine("Choose your database to import the data into: \n\tN:\tNeo4j\n\tM:\tMySql\n");
 			ChooseDatabase(conf, Console.ReadKey().Key);
@@ -51,6 +50,7 @@ namespace DummyDataGenerator
 			}
 			else
 			{
+				Console.WriteLine("Unsupported input, choose another: ");
 				ChooseDatabase(conf, Console.ReadKey().Key);
 				return;
 			}
