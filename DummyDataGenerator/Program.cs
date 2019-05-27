@@ -16,10 +16,10 @@ namespace DummyDataGenerator
 		public const int DEFAULT_NO_OF_PRODUCTS = 10;
 
 		public const string MYSQL_DATABASE_NAME = "scm_dummygen";
-		public const string MYSQL_USER = "client";
-		public const string MYSQL_PASSWORD = "client";
+		public const string MYSQL_USER = "root";
+		public const string MYSQL_PASSWORD = "teun1996";
 
-		public const string NEO4J_DATABASE_NAME = "scm_test_graph_dummydata";
+		public const string NEO4J_USERNAME = "neo4j";
 		public const string NEO4J_PASSWORD = "teun1996";
 
 		static void Main(string[] args)

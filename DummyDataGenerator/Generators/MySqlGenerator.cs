@@ -38,8 +38,8 @@ namespace DummyDataGenerator
 		{
 			RefreshDatabaseSchema();
 			int[] tlOrgs = GenerateTopLevelOrganizations(config.NumberOfTopLevelSuppliers);
-			int[] orgs = GenerateOrganizations(config.NumberOfSuppliers);
-			int[] acts = GenerateActivities(config.NumberOfActivities);
+			GenerateOrganizations(config.NumberOfSuppliers);
+			GenerateActivities(config.NumberOfActivities);
 			GenerateProductTrees(tlOrgs, config.NumberOfProducts, config.ChainDepth, config.ChainBreadth);
 			AddOrganizationsAndActivitiesToProductTree(config.NumberOfSuppliers, config.NumberOfTopLevelSuppliers, config.NumberOfActivities, config.NumberOfProducts);
 			AddMetaData(config);
@@ -51,6 +51,7 @@ namespace DummyDataGenerator
 		/// </summary>
 		private void RefreshDatabaseSchema()
 		{
+			var watch = System.Diagnostics.Stopwatch.StartNew();
 			MySqlScript script = new MySqlScript(connector.Connection, File.ReadAllText("mysql_generate_schema.sql"));
 			try
 			{
@@ -61,7 +62,12 @@ namespace DummyDataGenerator
 			{
 				Console.WriteLine("An error ocurred executing the refresh schema script: " + e);
 			}
-
+			finally
+			{
+				watch.Stop();
+				
+			}
+			Console.WriteLine("Refreshed schema in " + watch.ElapsedMilliseconds + "ms" + "(" + (watch.ElapsedMilliseconds / 1000) + "s) " +);
 		}
 
 		/// <summary>
@@ -81,7 +87,7 @@ namespace DummyDataGenerator
 				result.Add((int)com.LastInsertedId);
 			}
 			watch.Stop();
-			Console.WriteLine("Took " + watch.ElapsedMilliseconds + "ms to generate " + result.Count + " top level organisations");
+			Console.WriteLine("Took " + watch.ElapsedMilliseconds + "ms" + "(" + (watch.ElapsedMilliseconds / 1000) + "s) " + " to generate " + result.Count + " top level organisations");
 			return result.ToArray();
 		}
 
@@ -102,7 +108,7 @@ namespace DummyDataGenerator
 				result.Add((int)com.LastInsertedId);
 			}
 			watch.Stop();
-			Console.WriteLine("Took " + watch.ElapsedMilliseconds + "ms to generate " + result.Count + " organisations");
+			Console.WriteLine("Took " + watch.ElapsedMilliseconds + "ms" + "(" + (watch.ElapsedMilliseconds / 1000) + "s) " + " to generate " + result.Count + " organisations");
 			return result.ToArray();
 		}
 
@@ -123,7 +129,7 @@ namespace DummyDataGenerator
 				result.Add((int)com.LastInsertedId);
 			}
 			watch.Stop();
-			Console.WriteLine("Took " + watch.ElapsedMilliseconds + "ms to generate " + result.Count + " activities");
+			Console.WriteLine("Took " + watch.ElapsedMilliseconds + "ms" + "(" + (watch.ElapsedMilliseconds / 1000) + "s) " + " to generate " + result.Count + " activities");
 			return result.ToArray();
 		}
 
@@ -136,7 +142,6 @@ namespace DummyDataGenerator
 		/// <param name="breadthPerLevel">The breadth of each chain per level; the number of products to generate for the product above</param>
 		private void GenerateProductTrees(int[] organizationIdentifiers, int productsPerSupplier, int depth, int breadthPerLevel)
 		{
-			var watch = System.Diagnostics.Stopwatch.StartNew();
 
 			// for each top level supplier
 			for (int i = 0; i < organizationIdentifiers.Length; i++)
@@ -146,13 +151,14 @@ namespace DummyDataGenerator
 				// for each of their products
 				for (int j = 0; j < productsPerSupplier; j++)
 				{
+					var watch = System.Diagnostics.Stopwatch.StartNew();
 					//Console.WriteLine("Generating for product: " + j);
 
 					// generate the top level product
 					string statement = "INSERT INTO product(name) VALUES(" + "'Top Level Product #o" + (i + 1) + "-p" + (j + 1).ToString() + "');";
 					MySqlCommand com = new MySqlCommand(statement, connector.Connection);
 					com.ExecuteNonQuery();
-					int topLevelId = (int)com.LastInsertedId;
+					int topLevelId = (int) com.LastInsertedId;
 
 					List<int> previousResults = new List<int>();
 					// for the depth of the chain
@@ -176,11 +182,12 @@ namespace DummyDataGenerator
 						}
 
 					}
+					watch.Stop();
+					Console.WriteLine("Took " + watch.ElapsedMilliseconds + "ms" + "(" + (watch.ElapsedMilliseconds / 1000) + "s) " +
+						"to generate products and relations for product " + j + " for organisation " + i);
 				}
 			}
 
-			watch.Stop();
-			Console.WriteLine("Took " + watch.ElapsedMilliseconds + "ms to generate products and relations");
 		}
 
 		/// <summary>
@@ -192,6 +199,7 @@ namespace DummyDataGenerator
 		/// <returns>a list of the id's of the child products that have been created</returns>
 		private List<int> GenerateProductRowAndRelations(int chainId, List<int> parentProductIdentifiers, int breadthPerLevel)
 		{
+			// Console.WriteLine("Generating for " + chainId + ", parents: " +  string.Join(",", parentProductIdentifiers));
 			List<int> childProductsCreated = new List<int>();
 			// Console.WriteLine("parentProductIds length: " + parentProductIdentifiers.Count);
 			int i = 0;
@@ -230,6 +238,7 @@ namespace DummyDataGenerator
 		/// <param name="numberOfProducts">the total number of products specified</param>
 		private void AddOrganizationsAndActivitiesToProductTree(int numberOfOrganizations, int numberOfTopLevelOrganizations, int numberOfActivites, int numberOfProducts)
 		{
+			var watch = System.Diagnostics.Stopwatch.StartNew();
 			int count = 0;
 			string statement = "SELECT COUNT(*) FROM product";
 			MySqlCommand com = new MySqlCommand(statement, connector.Connection);
@@ -252,10 +261,12 @@ namespace DummyDataGenerator
 					(i % numberOfActivites) + 1,
 					// use the iterator as the product id
 					i + 1);
-				Console.WriteLine(statement2);
+				//Console.WriteLine(statement2);
 				MySqlCommand com2 = new MySqlCommand(statement2, connector.Connection);
 				com2.ExecuteNonQuery();
 			}
+			watch.Stop();
+			Console.WriteLine("Added organizations and activities to the product tree in " + watch.ElapsedMilliseconds + "ms" + "(" + (watch.ElapsedMilliseconds / 1000) + "s) ");
 		}
 
 		/// <summary>
@@ -268,7 +279,7 @@ namespace DummyDataGenerator
 			MySqlCommand com = new MySqlCommand(statement, connector.Connection);
 			com.ExecuteNonQuery();
 
-			string statement2 = string.Format("INSERT INTO db_meta(meta_name, meta_value) VALUES('NumberOfActivities', '{0}'), ('NumberOfProducts', '{1}'), ('NumberOfSuppliers', '{2}'), ('NumberOfTopLevelSuppliers', '{3}'), ('ChainBreadth', '{4}'), ('ChainDepth', '{5}')", 
+			string statement2 = string.Format("INSERT INTO db_meta(meta_name, meta_value) VALUES('NumberOfActivities', '{0}'), ('NumberOfProductsPerTopLevelSupplier', '{1}'), ('NumberOfSuppliers', '{2}'), ('NumberOfTopLevelSuppliers', '{3}'), ('ChainBreadth', '{4}'), ('ChainDepth', '{5}')", 
 				config.NumberOfActivities, 
 				config.NumberOfProducts, 
 				config.NumberOfSuppliers, 

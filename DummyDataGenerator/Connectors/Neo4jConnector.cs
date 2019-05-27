@@ -17,13 +17,18 @@ namespace DummyDataGenerator.Connectors
 			return _instance;
 		}
 
+		public IDriver Connection
+		{
+			get { return driver; }
+		}
+
 		private readonly IDriver driver;
 
 		private Neo4jConnector()
 		{
 			try
 			{
-				driver = GraphDatabase.Driver("bolt://localhost:7687", AuthTokens.Basic(Program.NEO4J_DATABASE_NAME, Program.NEO4J_PASSWORD));
+				driver = GraphDatabase.Driver("bolt://localhost:7687", AuthTokens.Basic(Program.NEO4J_USERNAME, Program.NEO4J_PASSWORD));
 				Console.WriteLine("Opened Neo4j connection");
 			}
 			catch (Neo4jException e)
