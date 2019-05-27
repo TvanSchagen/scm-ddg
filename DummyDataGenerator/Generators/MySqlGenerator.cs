@@ -231,7 +231,7 @@ namespace DummyDataGenerator
 		/// <param name="numberOfActivites">the total number of activities specified</param>
 		/// <param name="numberOfProducts">the total number of products specified</param>
 		/// ---
-		/// TO DO: check if this works with a large number of inserts (1m+)
+		/// TO DO: check if this works with a large number of inserts (1m+) otherwise split in batches of ~1-10k
 		/// ---
 		private void AddOrganizationsAndActivitiesToProductTree(int numberOfOrganizations, int numberOfTopLevelOrganizations, int numberOfActivites, int numberOfProducts)
 		{
@@ -255,7 +255,7 @@ namespace DummyDataGenerator
 			{
 				rows.Add(string.Format("({0}, {1}, {2})",
 					// add an offset of the toplevel suppliers, which are added first to the database, then modulo if the n.o. products outnumbers the n.o. organizations
-					((i + numberOfTopLevelOrganizations) % numberOfOrganizations) + 1,
+					(i % numberOfOrganizations) + 1 + numberOfTopLevelOrganizations,
 					// modulo if the n.o.products outnumbers the n.o. activities
 					(i % numberOfActivites) + 1,
 					// use the iterator as the product id
