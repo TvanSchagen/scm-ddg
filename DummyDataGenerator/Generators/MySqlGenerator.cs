@@ -67,7 +67,7 @@ namespace DummyDataGenerator
 				watch.Stop();
 				
 			}
-			Console.WriteLine("Refreshed schema in " + watch.ElapsedMilliseconds + "ms" + "(" + (watch.ElapsedMilliseconds / 1000) + "s) " +);
+			Console.WriteLine("Refreshed schema in " + watch.ElapsedMilliseconds + "ms " + "(" + (watch.ElapsedMilliseconds / 1000) + "s) ");
 		}
 
 		/// <summary>
@@ -87,7 +87,7 @@ namespace DummyDataGenerator
 				result.Add((int)com.LastInsertedId);
 			}
 			watch.Stop();
-			Console.WriteLine("Took " + watch.ElapsedMilliseconds + "ms" + "(" + (watch.ElapsedMilliseconds / 1000) + "s) " + " to generate " + result.Count + " top level organisations");
+			Console.WriteLine("Took " + watch.ElapsedMilliseconds + "ms " + "(" + (watch.ElapsedMilliseconds / 1000) + "s) " + " to generate " + result.Count + " top level organisations");
 			return result.ToArray();
 		}
 
@@ -108,7 +108,7 @@ namespace DummyDataGenerator
 				result.Add((int)com.LastInsertedId);
 			}
 			watch.Stop();
-			Console.WriteLine("Took " + watch.ElapsedMilliseconds + "ms" + "(" + (watch.ElapsedMilliseconds / 1000) + "s) " + " to generate " + result.Count + " organisations");
+			Console.WriteLine("Took " + watch.ElapsedMilliseconds + "ms " + "(" + (watch.ElapsedMilliseconds / 1000) + "s) " + " to generate " + result.Count + " organisations");
 			return result.ToArray();
 		}
 
@@ -129,7 +129,7 @@ namespace DummyDataGenerator
 				result.Add((int)com.LastInsertedId);
 			}
 			watch.Stop();
-			Console.WriteLine("Took " + watch.ElapsedMilliseconds + "ms" + "(" + (watch.ElapsedMilliseconds / 1000) + "s) " + " to generate " + result.Count + " activities");
+			Console.WriteLine("Took " + watch.ElapsedMilliseconds + "ms " + "(" + (watch.ElapsedMilliseconds / 1000) + "s) " + " to generate " + result.Count + " activities");
 			return result.ToArray();
 		}
 
@@ -142,11 +142,11 @@ namespace DummyDataGenerator
 		/// <param name="breadthPerLevel">The breadth of each chain per level; the number of products to generate for the product above</param>
 		private void GenerateProductTrees(int[] organizationIdentifiers, int productsPerSupplier, int depth, int breadthPerLevel)
 		{
-
+			var watchTotal = System.Diagnostics.Stopwatch.StartNew();
 			// for each top level supplier
 			for (int i = 0; i < organizationIdentifiers.Length; i++)
 			{
-				Console.WriteLine("Generating for Organization: " + i);
+				Console.WriteLine("Generating for Organization: " + (i+1));
 
 				// for each of their products
 				for (int j = 0; j < productsPerSupplier; j++)
@@ -164,13 +164,10 @@ namespace DummyDataGenerator
 					// for the depth of the chain
 					for (int k = 0; k < depth; k++)
 					{
-						//Console.WriteLine("Generating for depth: " + k);
-
 						// in the first pass, generate the products for our top level product
 						if (k == 0)
 						{
 							previousResults.Add(topLevelId);
-							// Console.WriteLine("First loop {0}, {1}, {2}", organizationIdentifiers[i], string.Join(",", previousResults), breadthPerLevel);
 							previousResults = GenerateProductRowAndRelations(i, previousResults, breadthPerLevel);
 
 						}
@@ -178,15 +175,16 @@ namespace DummyDataGenerator
 						else
 						{
 							previousResults = GenerateProductRowAndRelations(i, previousResults, breadthPerLevel);
-							// Console.WriteLine("Second loop {0}, {1}, {2}", organizationIdentifiers[i], string.Join(",", previousResults), breadthPerLevel);
 						}
 
 					}
 					watch.Stop();
-					Console.WriteLine("Took " + watch.ElapsedMilliseconds + "ms" + "(" + (watch.ElapsedMilliseconds / 1000) + "s) " +
+					Console.WriteLine("Took " + watch.ElapsedMilliseconds + "ms " + "(" + (watch.ElapsedMilliseconds / 1000) + "s) " +
 						"to generate products and relations for product " + j + " for organisation " + i);
 				}
 			}
+			watchTotal.Stop();
+			Console.WriteLine("Took " + watchTotal.ElapsedMilliseconds + "ms " + "(" + (watchTotal.ElapsedMilliseconds / 1000) + ") in total");
 
 		}
 
@@ -197,30 +195,26 @@ namespace DummyDataGenerator
 		/// <param name="parentProductIdentifiers">the list of parent products for which a number of child products has to be generated</param>
 		/// <param name="breadthPerLevel">the number of child products that have to be generated per parent product</param>
 		/// <returns>a list of the id's of the child products that have been created</returns>
+		/// ---
+		/// TO DO: check if we can speed this up using batches
+		/// ---
 		private List<int> GenerateProductRowAndRelations(int chainId, List<int> parentProductIdentifiers, int breadthPerLevel)
 		{
-			// Console.WriteLine("Generating for " + chainId + ", parents: " +  string.Join(",", parentProductIdentifiers));
 			List<int> childProductsCreated = new List<int>();
-			// Console.WriteLine("parentProductIds length: " + parentProductIdentifiers.Count);
 			int i = 0;
+
 			foreach (int item in parentProductIdentifiers)
 			{
-				//Console.WriteLine("Generating for Parent Product: " + parentProductIdentifiers[i]);
-
 				for (int j = 0; j < breadthPerLevel; j++)
 				{
-					//Console.WriteLine("Generating for breadth " + j);
-
-					// generate product
+					// first insert the product
 					string statement = "INSERT INTO product(name) VALUES(" + "'Product #c" + (chainId + 1) + "-p" + (i + 1) + "-b" + (j + 1) + "');";
 					MySqlCommand com = new MySqlCommand(statement, connector.Connection);
 					com.ExecuteNonQuery();
 					int childProductId = (int)com.LastInsertedId;
-					// Console.WriteLine("Added product " + childProductId);
 					childProductsCreated.Add(childProductId);
-					// Console.WriteLine("List length " + childProductsCreated.Count);
 
-					// add the product into the hierarchy
+					// then create the relation for the product hierarchy
 					string statement2 = "INSERT INTO consists_of(parent_product_id, child_product_id) VALUES(" + parentProductIdentifiers[i] + "," + childProductId + ");";
 					MySqlCommand com2 = new MySqlCommand(statement2, connector.Connection);
 					com2.ExecuteNonQuery();
@@ -236,6 +230,9 @@ namespace DummyDataGenerator
 		/// <param name="numberOfOrganizations">the total number of organizations specified</param>
 		/// <param name="numberOfActivites">the total number of activities specified</param>
 		/// <param name="numberOfProducts">the total number of products specified</param>
+		/// ---
+		/// TO DO: check if this works with a large number of inserts (1m+)
+		/// ---
 		private void AddOrganizationsAndActivitiesToProductTree(int numberOfOrganizations, int numberOfTopLevelOrganizations, int numberOfActivites, int numberOfProducts)
 		{
 			var watch = System.Diagnostics.Stopwatch.StartNew();
@@ -252,21 +249,25 @@ namespace DummyDataGenerator
 				throw new Exception("Could not return count!");
 			}
 
+			StringBuilder sCommand = new StringBuilder("INSERT INTO supplies(organization_id, activity_id, product_id) VALUES ");
+			List<string> rows = new List<string>();
 			for (int i = 0; i < count; i++)
 			{
-				string statement2 = string.Format("INSERT INTO supplies(organization_id, activity_id, product_id) VALUES({0}, {1}, {2});",
+				rows.Add(string.Format("({0}, {1}, {2})",
 					// add an offset of the toplevel suppliers, which are added first to the database, then modulo if the n.o. products outnumbers the n.o. organizations
 					((i + numberOfTopLevelOrganizations) % numberOfOrganizations) + 1,
 					// modulo if the n.o.products outnumbers the n.o. activities
 					(i % numberOfActivites) + 1,
 					// use the iterator as the product id
-					i + 1);
-				//Console.WriteLine(statement2);
-				MySqlCommand com2 = new MySqlCommand(statement2, connector.Connection);
-				com2.ExecuteNonQuery();
+					i + 1));
 			}
+			sCommand.Append(string.Join(",", rows));
+			sCommand.Append(";");
+			MySqlCommand com2 = new MySqlCommand(sCommand.ToString(), connector.Connection);
+			com2.ExecuteNonQuery();
+
 			watch.Stop();
-			Console.WriteLine("Added organizations and activities to the product tree in " + watch.ElapsedMilliseconds + "ms" + "(" + (watch.ElapsedMilliseconds / 1000) + "s) ");
+			Console.WriteLine("Took " + watch.ElapsedMilliseconds + "ms " + "(" + (watch.ElapsedMilliseconds / 1000) + "s) to add organizations and activities to the product tree");
 		}
 
 		/// <summary>
