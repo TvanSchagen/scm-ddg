@@ -36,12 +36,12 @@ namespace DummyDataGenerator
 		/// <param name="config">The configuration that holds the paremeters for the data</param>
 		public override void GenerateData(Configuration config)
 		{
-			RefreshDatabaseSchema();
+			/*RefreshDatabaseSchema();
 			int[] tlOrgs = GenerateTopLevelOrganizations(config.NumberOfTopLevelSuppliers);
 			GenerateOrganizations(config.NumberOfSuppliers);
 			GenerateActivities(config.NumberOfActivities);
 			GenerateProductTrees(tlOrgs, config.NumberOfProducts, config.ChainDepth, config.ChainBreadth);
-			AddOrganizationsAndActivitiesToProductTree(config.NumberOfSuppliers, config.NumberOfTopLevelSuppliers, config.NumberOfActivities, config.NumberOfProducts);
+			*/AddOrganizationsAndActivitiesToProductTree(config.NumberOfSuppliers, config.NumberOfTopLevelSuppliers, config.NumberOfActivities, config.NumberOfProducts);
 			AddMetaData(config);
 			Console.WriteLine("Done..");
 		}
@@ -230,14 +230,11 @@ namespace DummyDataGenerator
 		/// <param name="numberOfOrganizations">the total number of organizations specified</param>
 		/// <param name="numberOfActivites">the total number of activities specified</param>
 		/// <param name="numberOfProducts">the total number of products specified</param>
-		/// ---
-		/// TO DO: check if this works with a large number of inserts (1m+) otherwise split in batches of ~1-10k
-		/// ---
 		private void AddOrganizationsAndActivitiesToProductTree(int numberOfOrganizations, int numberOfTopLevelOrganizations, int numberOfActivites, int numberOfProducts)
 		{
 			var watch = System.Diagnostics.Stopwatch.StartNew();
 			int count = 0;
-			string statement = "SELECT COUNT(*) FROM product";
+			string statement = "USE test; SELECT COUNT(*) FROM product";
 			MySqlCommand com = new MySqlCommand(statement, connector.Connection);
 			object result = com.ExecuteScalar();
 			if (result != null)
@@ -249,22 +246,29 @@ namespace DummyDataGenerator
 				throw new Exception("Could not return count!");
 			}
 
-			StringBuilder sCommand = new StringBuilder("INSERT INTO supplies(organization_id, activity_id, product_id) VALUES ");
-			List<string> rows = new List<string>();
-			for (int i = 0; i < count; i++)
+			int batchSplitFactor = 10;
+			for (int i = 0; i < batchSplitFactor; i++)
 			{
-				rows.Add(string.Format("({0}, {1}, {2})",
+				StringBuilder sCommand = new StringBuilder("INSERT INTO supplies(organization_id, activity_id, product_id) VALUES ");
+				List<string> rows = new List<string>();
+				for (int j = 0; j < count / batchSplitFactor; j++)
+				{
+					int iteratorMultiplier = j * (batchSplitFactor + 1);
+					rows.Add(string.Format("({0}, {1}, {2})",
 					// add an offset of the toplevel suppliers, which are added first to the database, then modulo if the n.o. products outnumbers the n.o. organizations
-					(i % numberOfOrganizations) + 1 + numberOfTopLevelOrganizations,
+					(iteratorMultiplier % numberOfOrganizations) + 1 + numberOfTopLevelOrganizations,
 					// modulo if the n.o.products outnumbers the n.o. activities
-					(i % numberOfActivites) + 1,
+					(iteratorMultiplier % numberOfActivites) + 1,
 					// use the iterator as the product id
-					i + 1));
+					iteratorMultiplier + 1));
+
+					rows.Add(string.Format("('Product #{0}')", j * (i + 1)));
+				}
+				sCommand.Append(string.Join(",", rows));
+				sCommand.Append(";");
+				MySqlCommand com2 = new MySqlCommand(sCommand.ToString(), connector.Connection);
+				com2.ExecuteNonQuery();
 			}
-			sCommand.Append(string.Join(",", rows));
-			sCommand.Append(";");
-			MySqlCommand com2 = new MySqlCommand(sCommand.ToString(), connector.Connection);
-			com2.ExecuteNonQuery();
 
 			watch.Stop();
 			Console.WriteLine("Took " + watch.ElapsedMilliseconds + "ms " + "(" + (watch.ElapsedMilliseconds / 1000) + "s) to add organizations and activities to the product tree");

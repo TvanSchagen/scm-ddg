@@ -15,14 +15,20 @@ namespace DummyDataGenerator
 		public const int DEFAULT_NO_OF_TOPLEVELSUPPLIERS = 10;
 		public const int DEFAULT_NO_OF_PRODUCTS = 10;
 
-		public const string MYSQL_DATABASE_NAME = "sys";
-		// public const string MYSQL_USER = "root";
-		public const string MYSQL_USER = "client";
-		// public const string MYSQL_PASSWORD = "teun1996";
-		public const string MYSQL_PASSWORD = "client";
+		public const string MYSQL_DATABASE_NAME		= "test";
 
-		public const string NEO4J_USERNAME = "neo4j";
-		public const string NEO4J_PASSWORD = "teun1996";
+		// use for local
+		public const string MYSQL_DATABASE_HOST		= "localhost";
+		public const string MYSQL_USER				= "root";
+		public const string MYSQL_PASSWORD			= "teun1996";
+
+		// use for virtual machine
+		// public const string MYSQL_DATABASE_HOST	= "192.168.178.94";
+		// public const string MYSQL_USER			= "client";
+		// public const string MYSQL_PASSWORD		= "client";
+
+		public const string NEO4J_USERNAME			= "neo4j";
+		public const string NEO4J_PASSWORD			= "teun1996";
 
 		static void Main(string[] args)
 		{

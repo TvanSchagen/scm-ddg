@@ -28,7 +28,7 @@ namespace DummyDataGenerator.Connectors
 		{
 			if (Connection == null)
 			{
-				string connstring = string.Format("Server=192.168.178.94; database={0}; UID={1}; password={2}", Program.MYSQL_DATABASE_NAME, Program.MYSQL_USER, Program.MYSQL_PASSWORD);
+				string connstring = string.Format("Server={0}; database={1}; UID={2}; password={3}", Program.MYSQL_DATABASE_HOST, Program.MYSQL_DATABASE_NAME, Program.MYSQL_USER, Program.MYSQL_PASSWORD);
 				try
 				{
 					conn = new MySqlConnection(connstring);
