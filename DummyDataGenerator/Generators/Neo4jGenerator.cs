@@ -17,19 +17,26 @@ namespace DummyDataGenerator
 			connector = Neo4jConnector.Instance();
         }
 
+		/// <summary>
+		/// 
+		/// </summary>
+		/// <param name="config"></param>
         public override void GenerateData(Configuration config)
         {
 			RefreshSchema();
 			int[] tlOrgs = GenerateTopLevelOrganizations(config.NumberOfTopLevelSuppliers);
 			int[] orgs = GenerateOrganizations(config.NumberOfSuppliers);
-			int[] acts = GenerateActivities(config.NumberOfActivities);
+			// int[] acts = GenerateActivities(config.NumberOfActivities);
 			GenerateProductTrees(tlOrgs, config.NumberOfProducts, config.ChainDepth, config.ChainBreadth);
-			AddOrganizationsAndActivitiesToProductTree(acts, orgs);
+			AddOrganizationsAndActivitiesToProductTree(config.NumberOfActivities, orgs);
 			// AddConstraints();
 			AddMetaData(config);
 			Console.WriteLine("Done..");
 		}
 
+		/// <summary>
+		/// 
+		/// </summary>
 		private void RefreshSchema()
 		{
 			var watch = System.Diagnostics.Stopwatch.StartNew();
@@ -42,6 +49,11 @@ namespace DummyDataGenerator
 			Console.WriteLine("Refreshed schema in " + watch.ElapsedMilliseconds + "ms" + "(" + (watch.ElapsedMilliseconds / 1000) + "s)");
 		}
 
+		/// <summary>
+		/// 
+		/// </summary>
+		/// <param name="organizations"></param>
+		/// <returns></returns>
 		private int[] GenerateTopLevelOrganizations(int organizations)
 		{
 			var watch = System.Diagnostics.Stopwatch.StartNew();
@@ -62,6 +74,11 @@ namespace DummyDataGenerator
 			return result.ToArray();
 		}
 
+		/// <summary>
+		/// 
+		/// </summary>
+		/// <param name="organizations"></param>
+		/// <returns></returns>
 		private int[] GenerateOrganizations(int organizations)
 		{
 			List<int> result = new List<int>();
@@ -82,7 +99,12 @@ namespace DummyDataGenerator
 			return result.ToArray();
 		}
 
-		private int[] GenerateActivities(int activities)
+		/// <summary>
+		/// 
+		/// </summary>
+		/// <param name="activities"></param>
+		/// <returns></returns>
+		/*private int[] GenerateActivities(int activities)
 		{
 			List<int> result = new List<int>();
 			var watch = System.Diagnostics.Stopwatch.StartNew();
@@ -100,8 +122,15 @@ namespace DummyDataGenerator
 			watch.Stop();
 			Console.WriteLine("Added activities organizations in " + watch.ElapsedMilliseconds + "ms" + "(" + (watch.ElapsedMilliseconds / 1000) + "s)");
 			return result.ToArray();
-		}
+		}*/
 
+		/// <summary>
+		/// 
+		/// </summary>
+		/// <param name="organizationIdentifiers"></param>
+		/// <param name="productsPerSupplier"></param>
+		/// <param name="depth"></param>
+		/// <param name="breadthPerLevel"></param>
 		private void GenerateProductTrees(int[] organizationIdentifiers, int productsPerSupplier, int depth, int breadthPerLevel)
 		{
 			var watchTotal = System.Diagnostics.Stopwatch.StartNew();
@@ -153,6 +182,13 @@ namespace DummyDataGenerator
 			Console.WriteLine("Took " + watchTotal.ElapsedMilliseconds + "ms " + "(" + (watchTotal.ElapsedMilliseconds / 1000) + "s) in total");
 		}
 
+		/// <summary>
+		/// 
+		/// </summary>
+		/// <param name="chainId"></param>
+		/// <param name="parentProductIdentifiers"></param>
+		/// <param name="breadthPerLevel"></param>
+		/// <returns></returns>
 		private List<int> GenerateProductRowAndRelations(int chainId, int[] parentProductIdentifiers, int breadthPerLevel)
 		{
 			List<int> childProductsCreated = new List<int>();
@@ -187,7 +223,12 @@ namespace DummyDataGenerator
 			return childProductsCreated;
 		}
 
-		private void AddOrganizationsAndActivitiesToProductTree(int[] activityIds, int[] organizationIds)
+		/// <summary>
+		/// 
+		/// </summary>
+		/// <param name="activityIds"></param>
+		/// <param name="organizationIds"></param>
+		private void AddOrganizationsAndActivitiesToProductTree(int numberOfActivities, int[] organizationIds)
 		{
 			var watch = System.Diagnostics.Stopwatch.StartNew();
 			List<int> productIds = new List<int>();
@@ -202,8 +243,6 @@ namespace DummyDataGenerator
 					productIds.Add(r["id"].As<int>());
 				}
 			}
-
-			Console.WriteLine("Product Ids: " + string.Join(", ", productIds));
 			
 			int[] productIdsArray = productIds.ToArray();
 
@@ -212,13 +251,13 @@ namespace DummyDataGenerator
 				using (ISession session = connector.Connection.Session())
 				{
 					int productId = productIdsArray[i];
-					int activityId = activityIds[i % activityIds.Length];
+					//int activityId = activityIds[i % activityIds.Length];
 					int organizationId = organizationIds[i % organizationIds.Length];
-					string statement = "MATCH (p:Product), (o:Organization), (a:Activity)" +
+					string statement = "MATCH (p:Product), (o:Organization)" +
 										" WHERE ID(p) = " + productId +
 										" AND ID(o) = " + organizationId +
-										" AND ID(a) = " + activityId +
-										" CREATE (o)-[:CARRIES_OUT]->(a)-[:PRODUCES]->(p)";
+										" CREATE (o)-[:ACTIVITY_" + (i % numberOfActivities) + "]->(p)";
+										//" CREATE (o)-[:CARRIES_OUT]->(a:Activity { name:'Activity # " + i + "' })-[:PRODUCES]->(p)";
 					var res = session.Run(statement);
 				}
 			}
@@ -226,6 +265,9 @@ namespace DummyDataGenerator
 			Console.WriteLine("Took " + watch.ElapsedMilliseconds + "ms " + "(" + (watch.ElapsedMilliseconds / 1000) + "s) to add organizations and activities");
 		}
 
+		/// <summary>
+		/// 
+		/// </summary>
 		private void AddConstraints()
 		{
 			using(ISession session = connector.Connection.Session())
@@ -235,6 +277,10 @@ namespace DummyDataGenerator
 			}
 		}
 
+		/// <summary>
+		/// 
+		/// </summary>
+		/// <param name="config"></param>
 		private void AddMetaData(Configuration config)
 		{
 			using (ISession session = connector.Connection.Session())

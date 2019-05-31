@@ -5,28 +5,28 @@ namespace DummyDataGenerator
 	class Program
 	{
 
-		public const int DEFAULT_CHAIN_DEPTH = 10;
-		public const int DEFAULT_NO_OF_CHAINS = 100;
+		public const int DEFAULT_CHAIN_DEPTH = 2;
+		public const int DEFAULT_NO_OF_CHAINS = 5;
 		public const int DEFAULT_CHAIN_BREADTH = 2;
 		public const int DEFAULT_NO_OF_ACTIVITIES = 10;
 		public const int DEFAULT_NO_OF_SUPPLIERS = 100;
 		public const int DEFAULT_NO_OF_TOPLEVELSUPPLIERS = 10;
-		public const int DEFAULT_NO_OF_PRODUCTS = 10;
+		public const int DEFAULT_NO_OF_PRODUCTS = 5;
 
-		public const string MYSQL_DATABASE_NAME		= "sys";
+		public const string MYSQL_DATABASE_NAME	= "sys";
 
 		// use for local
-		public const string MYSQL_DATABASE_HOST		= "localhost";
-		public const string MYSQL_USER				= "root";
-		public const string MYSQL_PASSWORD			= "teun1996";
+		public const string MYSQL_DATABASE_HOST	= "localhost";
+		public const string MYSQL_USER = "root";
+		public const string MYSQL_PASSWORD = "teun1996";
 
 		// use for virtual machine
-		// public const string MYSQL_DATABASE_HOST	= "192.168.178.94";
-		// public const string MYSQL_USER			= "client";
-		// public const string MYSQL_PASSWORD		= "client";
+		// public const string MYSQL_DATABASE_HOST = "192.168.178.94";
+		// public const string MYSQL_USER = "client";
+		// public const string MYSQL_PASSWORD = "client";
 
-		public const string NEO4J_USERNAME			= "neo4j";
-		public const string NEO4J_PASSWORD			= "teun1996";
+		public const string NEO4J_USERNAME = "neo4j";
+		public const string NEO4J_PASSWORD = "teun1996";
 
 		static void Main(string[] args)
 		{

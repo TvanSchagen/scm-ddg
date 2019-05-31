@@ -248,7 +248,7 @@ namespace DummyDataGenerator
 				Console.WriteLine("Could not return count, using default: " + count);
 			}
 
-			// the batch split factor is the number of organizations times the number of products they have, to make sure we can always split them with remainder
+			// the batch split factor is the number of organizations times the number of products they have, to make sure we can always split them without remainder
 			int batchSplitFactor = numberOfProducts * numberOfTopLevelOrganizations;
 
 			for (int i = 0; i < batchSplitFactor; i++)
