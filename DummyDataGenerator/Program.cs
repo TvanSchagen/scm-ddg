@@ -1,10 +1,13 @@
 ﻿using System;
+using System.IO;
+using System.Text;
+using DotNetEnv;
 
 namespace DummyDataGenerator
 {
 	class Program
 	{
-
+		// default parameters for data generation
 		public const int DEFAULT_CHAIN_DEPTH = 2;
 		public const int DEFAULT_NO_OF_CHAINS = 5;
 		public const int DEFAULT_CHAIN_BREADTH = 2;
@@ -13,23 +16,30 @@ namespace DummyDataGenerator
 		public const int DEFAULT_NO_OF_TOPLEVELSUPPLIERS = 10;
 		public const int DEFAULT_NO_OF_PRODUCTS = 5;
 
-		public const string MYSQL_DATABASE_NAME	= "sys";
-
-		// use for local
-		public const string MYSQL_DATABASE_HOST	= "localhost";
-		public const string MYSQL_USER = "root";
-		public const string MYSQL_PASSWORD = "teun1996";
-
-		// use for virtual machine
-		// public const string MYSQL_DATABASE_HOST = "192.168.178.94";
-		// public const string MYSQL_USER = "client";
-		// public const string MYSQL_PASSWORD = "client";
-
-		public const string NEO4J_USERNAME = "neo4j";
-		public const string NEO4J_PASSWORD = "teun1996";
-
 		static void Main(string[] args)
 		{
+			string envPath = @"../../../../.env";
+			if (File.Exists(envPath))
+			{
+				Console.WriteLine("Found .env file");
+				// load environment file with connection properties
+				Env.Load(envPath);
+			}
+			else
+			{
+				Console.WriteLine("Did not find .env file, creating one..");
+				// create an .env file if it doesn't exist
+				using (FileStream fs = File.Create(envPath))
+				{
+					// adds the keys to the file
+					Byte[] info = new UTF8Encoding(true).GetBytes("MYSQL_HOST =\nMYSQL_DB = \nMYSQL_USER = \nMYSQL_PW = \nNEO4J_HOST = \nNEO4J_USER = \nNEO4J_PW =");
+					fs.Write(info, 0, info.Length);
+					Console.WriteLine("Created .env file, please specify connection properties in the file and restart the program");
+				}
+				System.Environment.Exit(0);
+			}
+
+			// get user input for data generation parameters
 			Console.WriteLine("Enter parameters (leave blank for default):");
 			Configuration conf = new Configuration(
 				ReadInt("chain depth: ", DEFAULT_CHAIN_DEPTH),
@@ -43,6 +53,11 @@ namespace DummyDataGenerator
 			ChooseDatabase(conf, Console.ReadKey().Key);
 		}
 
+		/// <summary>
+		/// Directs the program to the chosen database
+		/// </summary>
+		/// <param name="conf">The associated configuration for the data generation</param>
+		/// <param name="input">The key-input with which the user chooses their database</param>
 		private static void ChooseDatabase(Configuration conf, ConsoleKey input)
 		{
 			Database database;
@@ -69,6 +84,12 @@ namespace DummyDataGenerator
 			Console.ReadLine();
 		}
 
+		/// <summary>
+		/// Reads an integer and displays a message, returns the default-input if parsing fails
+		/// </summary>
+		/// <param name="message">The message to be displayed</param>
+		/// <param name="defaultInput">The default input that it sent back when parsing fails</param>
+		/// <returns></returns>
 		private static int ReadInt(string message, int defaultInput)
 		{
 			Console.WriteLine(message);

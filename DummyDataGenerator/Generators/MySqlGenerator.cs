@@ -235,7 +235,7 @@ namespace DummyDataGenerator
 		{
 			var watch = System.Diagnostics.Stopwatch.StartNew();
 			int count = 0;
-			string statement = "USE scm_dummygen7; SELECT COUNT(*) FROM product";
+			string statement = "SELECT COUNT(*) FROM product";
 			MySqlCommand com = new MySqlCommand(statement, connector.Connection);
 			object result = com.ExecuteScalar();
 			if (result != null)
@@ -244,6 +244,7 @@ namespace DummyDataGenerator
 			}
 			else
 			{
+				// if the count isn't returned properly, we calculate what the count should theoretically be
 				count = numberOfTopLevelOrganizations * numberOfOrganizations * (chainBreadth ^ chainDepth);
 				Console.WriteLine("Could not return count, using default: " + count);
 			}

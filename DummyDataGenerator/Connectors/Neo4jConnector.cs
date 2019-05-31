@@ -1,4 +1,5 @@
-﻿using Neo4j.Driver.V1;
+﻿using DotNetEnv;
+using Neo4j.Driver.V1;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -28,7 +29,11 @@ namespace DummyDataGenerator.Connectors
 		{
 			try
 			{
-				driver = GraphDatabase.Driver("bolt://localhost:7687", AuthTokens.Basic(Program.NEO4J_USERNAME, Program.NEO4J_PASSWORD));
+				driver = GraphDatabase.Driver(Env.GetString("NEO4J_HOST"), 
+					AuthTokens.Basic(
+						Env.GetString("NEO4J_USER"), 
+						Env.GetString("NEO4J_PW"))
+					);
 				Console.WriteLine("Opened Neo4j connection");
 			}
 			catch (Neo4jException e)

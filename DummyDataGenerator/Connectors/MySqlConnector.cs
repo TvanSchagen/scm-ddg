@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Text;
 using MySql.Data;
 using MySql.Data.MySqlClient;
+using DotNetEnv;
 
 namespace DummyDataGenerator.Connectors
 {
@@ -28,7 +29,13 @@ namespace DummyDataGenerator.Connectors
 		{
 			if (Connection == null)
 			{
-				string connstring = string.Format("Server={0}; database={1}; UID={2}; password={3}", Program.MYSQL_DATABASE_HOST, Program.MYSQL_DATABASE_NAME, Program.MYSQL_USER, Program.MYSQL_PASSWORD);
+				string connstring = string.Format(
+					"Server={0}; database={1}; UID={2}; password={3}", 
+					Env.GetString("MYSQL_HOST"), 
+					Env.GetString("MYSQL_DB"),
+					Env.GetString("MYSQL_USER"),
+					Env.GetString("MYSQL_PW")
+				);
 				try
 				{
 					conn = new MySqlConnection(connstring);
