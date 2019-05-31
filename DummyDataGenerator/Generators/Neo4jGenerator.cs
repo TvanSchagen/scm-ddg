@@ -2,7 +2,8 @@
 using Neo4j.Driver.V1;
 using System;
 using System.Collections.Generic;
-using System.Text;
+using System.IO;
+using System.Runtime.Serialization.Json;
 
 namespace DummyDataGenerator
 {
@@ -20,11 +21,11 @@ namespace DummyDataGenerator
         {
 			RefreshSchema();
 			int[] tlOrgs = GenerateTopLevelOrganizations(config.NumberOfTopLevelSuppliers);
-			GenerateOrganizations(config.NumberOfSuppliers);
-			GenerateActivities(config.NumberOfActivities);
+			int[] orgs = GenerateOrganizations(config.NumberOfSuppliers);
+			int[] acts = GenerateActivities(config.NumberOfActivities);
 			GenerateProductTrees(tlOrgs, config.NumberOfProducts, config.ChainDepth, config.ChainBreadth);
-			AddOrganizationsAndActivitiesToProductTree(config.NumberOfSuppliers, config.NumberOfTopLevelSuppliers, config.NumberOfActivities, config.NumberOfProducts);
-			AddConstraints();
+			AddOrganizationsAndActivitiesToProductTree(acts, orgs);
+			// AddConstraints();
 			AddMetaData(config);
 			Console.WriteLine("Done..");
 		}
@@ -101,24 +102,152 @@ namespace DummyDataGenerator
 			return result.ToArray();
 		}
 
-		private void GenerateProductTrees(int[] tlOrgs, int numberOfProducts, int chainDepth, int chainBreadth)
+		private void GenerateProductTrees(int[] organizationIdentifiers, int productsPerSupplier, int depth, int breadthPerLevel)
 		{
-			
+			var watchTotal = System.Diagnostics.Stopwatch.StartNew();
+			// for each top level supplier
+			for (int i = 0; i < organizationIdentifiers.Length; i++)
+			{
+				Console.WriteLine("Generating for Organization: " + (i + 1));
+
+				// for each of their products
+				for (int j = 0; j < productsPerSupplier; j++)
+				{
+					var watch = System.Diagnostics.Stopwatch.StartNew();
+					int topLevelId = 0;
+
+					// generate the top level product
+					using (ISession session = connector.Connection.Session())
+					{
+						string statement = "CREATE (n:Product { name: 'TopLevelProduct #o" + (i + 1) + "-p" + (j + 1) + "' }) RETURN ID(n) AS id";
+						var res = session.Run(statement);
+						IRecord record = res.Peek();
+						topLevelId = record["id"].As<int>();
+					}
+
+					List<int> previousResults = new List<int>();
+
+					// for the depth of the chain
+					for (int k = 0; k < depth; k++)
+					{
+						// in the first pass, generate the products for our top level product
+						if (k == 0)
+						{
+							previousResults.Add(topLevelId);
+							previousResults = GenerateProductRowAndRelations(i, previousResults.ToArray(), breadthPerLevel);
+
+						}
+						// in subsequent passes, take the previous row of products and generate a new underlying row for all of them
+						else
+						{
+							previousResults = GenerateProductRowAndRelations(i, previousResults.ToArray(), breadthPerLevel);
+						}
+
+					}
+					watch.Stop();
+					Console.WriteLine("Took " + watch.ElapsedMilliseconds + "ms " + "(" + (watch.ElapsedMilliseconds / 1000) + "s) " +
+						"to generate products and relations for product " + (j + 1) + " for organisation " + (i + 1));
+				}
+			}
+			watchTotal.Stop();
+			Console.WriteLine("Took " + watchTotal.ElapsedMilliseconds + "ms " + "(" + (watchTotal.ElapsedMilliseconds / 1000) + "s) in total");
 		}
 
-		private void AddOrganizationsAndActivitiesToProductTree(int numberOfSuppliers, int numberOfTopLevelSuppliers, int numberOfActivities, int numberOfProducts)
+		private List<int> GenerateProductRowAndRelations(int chainId, int[] parentProductIdentifiers, int breadthPerLevel)
 		{
+			List<int> childProductsCreated = new List<int>();
+
+			for (int i = 0; i < parentProductIdentifiers.Length; i++)
+			{
+				for (int j = 0; j < breadthPerLevel; j++)
+				{
+					int childProductId;
+					// first insert the product
+					using (ISession session = connector.Connection.Session())
+					{
+						string statement = "CREATE (n:Product { name: 'Product #c" + (chainId + 1) + "-p" + (i + 1) + "-p" + (j + 1) + "' }) RETURN ID(n) AS id";
+						var res = session.Run(statement);
+						IRecord record = res.Peek();
+						childProductId = record["id"].As<int>();
+					}
+					// add it to the products created list
+					childProductsCreated.Add(childProductId);
+
+					// then create the relation for the product hierarchy
+					using (ISession session = connector.Connection.Session())
+					{
+						string statement = "MATCH (p:Product), (c:Product)" +
+											" WHERE ID(p) = " + parentProductIdentifiers[i] +
+											" AND ID(c) =" + childProductId +
+											" CREATE (p)-[:CONSISTS_OF]->(c)";
+						var res = session.Run(statement);
+					}
+				}
+			}
+			return childProductsCreated;
+		}
+
+		private void AddOrganizationsAndActivitiesToProductTree(int[] activityIds, int[] organizationIds)
+		{
+			var watch = System.Diagnostics.Stopwatch.StartNew();
+			List<int> productIds = new List<int>();
+			using (ISession session = connector.Connection.Session())
+			{
+				string statement =	"MATCH (n:Product)" +
+									" WHERE n.name STARTS WITH 'Product'" +
+									" RETURN ID(n) AS id";
+				var res = session.Run(statement);
+				foreach(IRecord r in res)
+				{
+					productIds.Add(r["id"].As<int>());
+				}
+			}
+
+			Console.WriteLine("Product Ids: " + string.Join(", ", productIds));
 			
+			int[] productIdsArray = productIds.ToArray();
+
+			for (int i = 0; i < productIdsArray.Length; i++)
+			{
+				using (ISession session = connector.Connection.Session())
+				{
+					int productId = productIdsArray[i];
+					int activityId = activityIds[i % activityIds.Length];
+					int organizationId = organizationIds[i % organizationIds.Length];
+					string statement = "MATCH (p:Product), (o:Organization), (a:Activity)" +
+										" WHERE ID(p) = " + productId +
+										" AND ID(o) = " + organizationId +
+										" AND ID(a) = " + activityId +
+										" CREATE (o)-[:CARRIES_OUT]->(a)-[:PRODUCES]->(p)";
+					var res = session.Run(statement);
+				}
+			}
+			watch.Stop();
+			Console.WriteLine("Took " + watch.ElapsedMilliseconds + "ms " + "(" + (watch.ElapsedMilliseconds / 1000) + "s) to add organizations and activities");
 		}
 
 		private void AddConstraints()
 		{
-
+			using(ISession session = connector.Connection.Session())
+			{
+				string statement = "ADD INDEX ON :Organization(name)";
+				IStatementResult res = session.Run(statement); 
+			}
 		}
 
 		private void AddMetaData(Configuration config)
 		{
-
+			using (ISession session = connector.Connection.Session())
+			{
+				string statement = "CREATE (n:DbMeta) " +
+									"SET n.chainDepth = " + config.ChainDepth +
+									", n.chainBreadth = " + config.ChainBreadth +
+									", n.numberOfActivities = " + config.NumberOfActivities +
+									", n.numberOfProducts = " + config.NumberOfProducts +
+									", n.numberOfSuppliers = " + config.NumberOfSuppliers +
+									", n.numberOfTopLevelSuppliers = " + config.NumberOfTopLevelSuppliers;
+				IStatementResult res = session.Run(statement);
+			}
 		}
 
 		public override void CloseConnection()

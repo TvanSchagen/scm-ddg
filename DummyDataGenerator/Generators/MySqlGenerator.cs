@@ -36,14 +36,14 @@ namespace DummyDataGenerator
 		/// <param name="config">The configuration that holds the paremeters for the data</param>
 		public override void GenerateData(Configuration config)
 		{
-			/*RefreshDatabaseSchema();
+			RefreshDatabaseSchema();
 			int[] tlOrgs = GenerateTopLevelOrganizations(config.NumberOfTopLevelSuppliers);
 			GenerateOrganizations(config.NumberOfSuppliers);
 			GenerateActivities(config.NumberOfActivities);
 			GenerateProductTrees(tlOrgs, config.NumberOfProducts, config.ChainDepth, config.ChainBreadth);
-			*/AddOrganizationsAndActivitiesToProductTree(config.NumberOfSuppliers, config.NumberOfTopLevelSuppliers, config.NumberOfActivities, config.NumberOfProducts);
+			AddOrganizationsAndActivitiesToProductTree(config.NumberOfSuppliers, config.NumberOfTopLevelSuppliers, config.NumberOfActivities, config.NumberOfProducts, config.ChainDepth, config.ChainBreadth);
 			AddMetaData(config);
-			Console.WriteLine("Done..");
+			Console.WriteLine("Program done, press enter to continue");
 		}
 
 		/// <summary>
@@ -152,10 +152,9 @@ namespace DummyDataGenerator
 				for (int j = 0; j < productsPerSupplier; j++)
 				{
 					var watch = System.Diagnostics.Stopwatch.StartNew();
-					//Console.WriteLine("Generating for product: " + j);
 
 					// generate the top level product
-					string statement = "INSERT INTO product(name) VALUES(" + "'Top Level Product #o" + (i + 1) + "-p" + (j + 1).ToString() + "');";
+					string statement = "INSERT INTO product(name) VALUES(" + "'Top Level Product #o" + (i + 1) + "-p" + (j + 1) + "');";
 					MySqlCommand com = new MySqlCommand(statement, connector.Connection);
 					com.ExecuteNonQuery();
 					int topLevelId = (int) com.LastInsertedId;
@@ -180,12 +179,11 @@ namespace DummyDataGenerator
 					}
 					watch.Stop();
 					Console.WriteLine("Took " + watch.ElapsedMilliseconds + "ms " + "(" + (watch.ElapsedMilliseconds / 1000) + "s) " +
-						"to generate products and relations for product " + j + " for organisation " + i);
+						"to generate products and relations for product " + (j + 1) + " for organisation " + (i + 1));
 				}
 			}
 			watchTotal.Stop();
-			Console.WriteLine("Took " + watchTotal.ElapsedMilliseconds + "ms " + "(" + (watchTotal.ElapsedMilliseconds / 1000) + ") in total");
-
+			Console.WriteLine("Took " + watchTotal.ElapsedMilliseconds + "ms " + "(" + (watchTotal.ElapsedMilliseconds / 1000) + "s) in total");
 		}
 
 		/// <summary>
@@ -230,11 +228,14 @@ namespace DummyDataGenerator
 		/// <param name="numberOfOrganizations">the total number of organizations specified</param>
 		/// <param name="numberOfActivites">the total number of activities specified</param>
 		/// <param name="numberOfProducts">the total number of products specified</param>
-		private void AddOrganizationsAndActivitiesToProductTree(int numberOfOrganizations, int numberOfTopLevelOrganizations, int numberOfActivites, int numberOfProducts)
+		/// ---
+		/// todo: check whether the supplies relation is correctly generated: are the right products assigned to the right orgs + check how to define the right batchsplitfactor
+		/// ---
+		private void AddOrganizationsAndActivitiesToProductTree(int numberOfOrganizations, int numberOfTopLevelOrganizations, int numberOfActivites, int numberOfProducts, int chainDepth, int chainBreadth)
 		{
 			var watch = System.Diagnostics.Stopwatch.StartNew();
 			int count = 0;
-			string statement = "USE test; SELECT COUNT(*) FROM product";
+			string statement = "USE scm_dummygen7; SELECT COUNT(*) FROM product";
 			MySqlCommand com = new MySqlCommand(statement, connector.Connection);
 			object result = com.ExecuteScalar();
 			if (result != null)
@@ -243,26 +244,29 @@ namespace DummyDataGenerator
 			}
 			else
 			{
-				throw new Exception("Could not return count!");
+				count = numberOfTopLevelOrganizations * numberOfOrganizations * (chainBreadth ^ chainDepth);
+				Console.WriteLine("Could not return count, using default: " + count);
 			}
 
-			int batchSplitFactor = 10;
+			// the batch split factor is the number of organizations times the number of products they have, to make sure we can always split them with remainder
+			int batchSplitFactor = numberOfProducts * numberOfTopLevelOrganizations;
+
 			for (int i = 0; i < batchSplitFactor; i++)
 			{
 				StringBuilder sCommand = new StringBuilder("INSERT INTO supplies(organization_id, activity_id, product_id) VALUES ");
 				List<string> rows = new List<string>();
 				for (int j = 0; j < count / batchSplitFactor; j++)
 				{
-					int iteratorMultiplier = j * (batchSplitFactor + 1);
+					int iteratorMultiplier = (j + 1) * (i + 1);
 					rows.Add(string.Format("({0}, {1}, {2})",
 					// add an offset of the toplevel suppliers, which are added first to the database, then modulo if the n.o. products outnumbers the n.o. organizations
 					(iteratorMultiplier % numberOfOrganizations) + 1 + numberOfTopLevelOrganizations,
 					// modulo if the n.o.products outnumbers the n.o. activities
 					(iteratorMultiplier % numberOfActivites) + 1,
 					// use the iterator as the product id
-					iteratorMultiplier + 1));
+					iteratorMultiplier));
 
-					rows.Add(string.Format("('Product #{0}')", j * (i + 1)));
+					//rows.Add(string.Format("('Product #{0}')", j * (i + 1)));
 				}
 				sCommand.Append(string.Join(",", rows));
 				sCommand.Append(";");
@@ -278,7 +282,7 @@ namespace DummyDataGenerator
 		/// Adds metadata to a separate table in the database
 		/// </summary>
 		/// <param name="config">The supplied configuration</param>
-		void AddMetaData(Configuration config)
+		private void AddMetaData(Configuration config)
 		{
 			string statement = "DROP TABLE IF EXISTS `db_meta`; CREATE TABLE `db_meta` (`meta_name` VARCHAR(50), `meta_value` VARCHAR(50)) ENGINE=InnoDB;";
 			MySqlCommand com = new MySqlCommand(statement, connector.Connection);
@@ -293,6 +297,7 @@ namespace DummyDataGenerator
 				config.ChainDepth);
 			MySqlCommand com2 = new MySqlCommand(statement2, connector.Connection);
 			com2.ExecuteNonQuery();
+			Console.WriteLine("Added metadata to the database");
 		}
 
 	}

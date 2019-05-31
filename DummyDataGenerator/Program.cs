@@ -1,6 +1,4 @@
 ﻿using System;
-using MySql.Data;
-using MySql.Data.MySqlClient;
 
 namespace DummyDataGenerator
 {
@@ -15,7 +13,7 @@ namespace DummyDataGenerator
 		public const int DEFAULT_NO_OF_TOPLEVELSUPPLIERS = 10;
 		public const int DEFAULT_NO_OF_PRODUCTS = 10;
 
-		public const string MYSQL_DATABASE_NAME		= "test";
+		public const string MYSQL_DATABASE_NAME		= "sys";
 
 		// use for local
 		public const string MYSQL_DATABASE_HOST		= "localhost";

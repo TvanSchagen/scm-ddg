@@ -1,6 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using System.Runtime.Serialization;
+using Newtonsoft.Json;
 
 namespace DummyDataGenerator
 {
@@ -14,20 +13,25 @@ namespace DummyDataGenerator
 
     }
 
-    public class Configuration
+	public class Configuration
     {
+		[JsonProperty("cd")]
+		public int ChainDepth { get; set; }
 
-		public int ChainDepth { get; }
+		[JsonProperty("noa")]
+		public int NumberOfActivities { get; set; }
 
-		public int NumberOfActivities { get; }
+		[JsonProperty("nos")]
+		public int NumberOfSuppliers { get; set; }
 
-		public int NumberOfSuppliers { get; }
+		[JsonProperty("notls")]
+		public int NumberOfTopLevelSuppliers { get; set; }
 
-		public int NumberOfTopLevelSuppliers { get; }
+		[JsonProperty("nop")]
+		public int NumberOfProducts { get; set; }
 
-		public int NumberOfProducts { get; }
-
-		public int ChainBreadth { get; }
+		[JsonProperty("cb")]
+		public int ChainBreadth { get; set; }
 
 
 		public Configuration(int chainDepth, int chainBreadth, int numberOfActivities, int numberOfSuppliers, int numberOfTopLevelSuppliers, int numberOfProducts)
