@@ -15,7 +15,7 @@ Execute using Visual Studio 2017 or higher.
 
 ### Current Database Support
 Database | Type | Support
---- | ---
+--- | --- | ---
 MySQL | Relational | 90%
 Neo4j | Graph |90%
 SQL Server | Relational | 0%
@@ -23,7 +23,7 @@ PostgreSQL | Relational | 0%
 Titan  | Graph | 0%
 OrientDB | Document/Graph | 0%
 MongoDB | Document | 0%
-... | ...
+... | ... | ...
 
 ### To Do
 - Expand the data models with more properties
