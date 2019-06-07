@@ -52,7 +52,7 @@ namespace DummyDataGenerator
 		private void RefreshDatabaseSchema()
 		{
 			var watch = System.Diagnostics.Stopwatch.StartNew();
-			MySqlScript script = new MySqlScript(connector.Connection, File.ReadAllText("mysql_generate_schema.sql"));
+			MySqlScript script = new MySqlScript(connector.Connection, File.ReadAllText("../../../mysql_generate_schema.sql"));
 			try
 			{
 				Console.WriteLine("Executing refresh schema script..");
@@ -68,6 +68,11 @@ namespace DummyDataGenerator
 				
 			}
 			Console.WriteLine("Refreshed schema in " + watch.ElapsedMilliseconds + "ms " + "(" + (watch.ElapsedMilliseconds / 1000) + "s) ");
+
+			// set autocommit to off
+			string statement = "START TRANSACTION;";
+			MySqlCommand com = new MySqlCommand(statement, connector.Connection);
+			com.ExecuteNonQuery();
 		}
 
 		/// <summary>
@@ -289,16 +294,29 @@ namespace DummyDataGenerator
 			MySqlCommand com = new MySqlCommand(statement, connector.Connection);
 			com.ExecuteNonQuery();
 
-			string statement2 = string.Format("INSERT INTO db_meta(meta_name, meta_value) VALUES('NumberOfActivities', '{0}'), ('NumberOfProductsPerTopLevelSupplier', '{1}'), ('NumberOfSuppliers', '{2}'), ('NumberOfTopLevelSuppliers', '{3}'), ('ChainBreadth', '{4}'), ('ChainDepth', '{5}')", 
+			string statement2 = string.Format(
+				"INSERT INTO db_meta(meta_name, meta_value) " +
+				"VALUES('NumberOfActivities', '{0}'), " +
+					"('NumberOfProductsPerTopLevelSupplier', '{1}'), " +
+					"('NumberOfSuppliers', '{2}'), " +
+					"('NumberOfTopLevelSuppliers', '{3}'), " +
+					"('ChainBreadth', '{4}'), " +
+					"('ChainDepth', '{5}')", 
 				config.NumberOfActivities, 
 				config.NumberOfProducts, 
 				config.NumberOfSuppliers, 
 				config.NumberOfTopLevelSuppliers, 
 				config.ChainBreadth, 
-				config.ChainDepth);
+				config.ChainDepth
+			);
 			MySqlCommand com2 = new MySqlCommand(statement2, connector.Connection);
 			com2.ExecuteNonQuery();
 			Console.WriteLine("Added metadata to the database");
+
+			// commit changes
+			string statement3 = "COMMIT;";
+			MySqlCommand com3 = new MySqlCommand(statement3, connector.Connection);
+			com3.ExecuteNonQuery();
 		}
 
 	}

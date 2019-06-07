@@ -1,5 +1,5 @@
-CREATE DATABASE  IF NOT EXISTS `scm_dummygen` /*!40100 DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci */ /*!80016 DEFAULT ENCRYPTION='N' */;
-USE `scm_dummygen`;
+CREATE DATABASE  IF NOT EXISTS `scm_al_breadthx_depthx` /*!40100 DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci */ /*!80016 DEFAULT ENCRYPTION='N' */;
+USE `scm_al_breadthx_depthx`;
 -- MySQL dump 10.13  Distrib 8.0.16, for Win64 (x86_64)
 --
 -- Host: localhost    Database: scm_test_dummy_generated_v2
