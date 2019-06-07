@@ -172,13 +172,13 @@ namespace DummyDataGenerator
 						if (k == 0)
 						{
 							previousResults.Add(topLevelId);
-							previousResults = GenerateProductRowAndRelations(i, previousResults, breadthPerLevel);
+							previousResults = GenerateProductRowAndRelations(i, k + 1, previousResults, breadthPerLevel);
 
 						}
 						// in subsequent passes, take the previous row of products and generate a new underlying row for all of them
 						else
 						{
-							previousResults = GenerateProductRowAndRelations(i, previousResults, breadthPerLevel);
+							previousResults = GenerateProductRowAndRelations(i, k + 1, previousResults, breadthPerLevel);
 						}
 
 					}
@@ -201,7 +201,7 @@ namespace DummyDataGenerator
 		/// ---
 		/// TO DO: check if we can speed this up using batches
 		/// ---
-		private List<int> GenerateProductRowAndRelations(int chainId, List<int> parentProductIdentifiers, int breadthPerLevel)
+		private List<int> GenerateProductRowAndRelations(int chainId, int depth, List<int> parentProductIdentifiers, int breadthPerLevel)
 		{
 			List<int> childProductsCreated = new List<int>();
 			int i = 0;
@@ -211,7 +211,7 @@ namespace DummyDataGenerator
 				for (int j = 0; j < breadthPerLevel; j++)
 				{
 					// first insert the product
-					string statement = "INSERT INTO product(name) VALUES(" + "'Product #c" + (chainId + 1) + "-p" + (i + 1) + "-b" + (j + 1) + "');";
+					string statement = "INSERT INTO product(name) VALUES(" + "'Product #c" + (chainId + 1) + "-d" + depth + "-p" + (i + 1) + "-b" + (j + 1) + "');";
 					MySqlCommand com = new MySqlCommand(statement, connector.Connection);
 					com.ExecuteNonQuery();
 					int childProductId = (int)com.LastInsertedId;
