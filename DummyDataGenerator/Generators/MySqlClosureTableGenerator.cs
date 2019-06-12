@@ -243,14 +243,14 @@ namespace DummyDataGenerator.Generators
 						MySqlCommand com4 = new MySqlCommand(statement4, connector.Connection);
 						string list = (string) com4.ExecuteScalar();
 						productIds = list.Split(',').Select(Int32.Parse).ToList();
-						Console.WriteLine("Parent Product Ids: " + list);
+						Console.WriteLine("Parent Product Ids: " + list + " for child " + childProductId);
 
-						// skip the first id, because this was already inserted before (initial parent > child relation)
-						for (int k = 1; k < productIds.Count; k++)
+						// skip the first two id's, because they the first one is referencing themselves, and the second one was already inserted before (initial parent > child relation)
+						for (int k = 2; k < productIds.Count; k++)
 						{
 							// inserto into hierarchy
 							string statement5 = string.Format("INSERT INTO consists_of(parent_product_id, child_product_id) VALUES(" + productIds[k] + "," + childProductId + ");");
-							Console.WriteLine(statement5);
+							Console.WriteLine("Inserting: " + productIds[k]);
 							MySqlCommand com5 = new MySqlCommand(statement5, connector.Connection);
 							com5.ExecuteNonQuery();
 						}
