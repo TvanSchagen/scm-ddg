@@ -88,7 +88,7 @@ namespace DummyDataGenerator
 				for (int i = 0; i < organizations; i++)
 				{
 					string statement = "CREATE (n:Organization { name: 'Organization #" + i + "' }) RETURN ID(n) AS id";
-					IStatementResult res = session.Run(statement);
+					IStatementResult res = session.WriteTransaction(tx => tx.Run(statement));
 					IRecord record = res.Peek();
 					int id = record["id"].As<int>();
 					result.Add(id);
@@ -149,7 +149,7 @@ namespace DummyDataGenerator
 					using (ISession session = connector.Connection.Session())
 					{
 						string statement = "CREATE (n:Product { name: 'TopLevelProduct #o" + (i + 1) + "-p" + (j + 1) + "' }) RETURN ID(n) AS id";
-						var res = session.Run(statement);
+						IStatementResult res = session.WriteTransaction(tx => tx.Run(statement));
 						IRecord record = res.Peek();
 						topLevelId = record["id"].As<int>();
 					}
@@ -202,7 +202,7 @@ namespace DummyDataGenerator
 					using (ISession session = connector.Connection.Session())
 					{
 						string statement = "CREATE (n:Product { name: 'Product #c" + (chainId + 1) + "-p" + (i + 1) + "-p" + (j + 1) + "' }) RETURN ID(n) AS id";
-						var res = session.Run(statement);
+						IStatementResult res = session.WriteTransaction(tx => tx.Run(statement));
 						IRecord record = res.Peek();
 						childProductId = record["id"].As<int>();
 					}
@@ -216,7 +216,7 @@ namespace DummyDataGenerator
 											" WHERE ID(p) = " + parentProductIdentifiers[i] +
 											" AND ID(c) =" + childProductId +
 											" CREATE (p)-[:CONSISTS_OF]->(c)";
-						var res = session.Run(statement);
+						session.WriteTransaction(tx => tx.Run(statement));
 					}
 				}
 			}
@@ -237,8 +237,8 @@ namespace DummyDataGenerator
 				string statement =	"MATCH (n:Product)" +
 									" WHERE n.name STARTS WITH 'Product'" +
 									" RETURN ID(n) AS id";
-				var res = session.Run(statement);
-				foreach(IRecord r in res)
+				IStatementResult res = session.WriteTransaction(tx => tx.Run(statement));
+				foreach (IRecord r in res)
 				{
 					productIds.Add(r["id"].As<int>());
 				}
@@ -257,8 +257,8 @@ namespace DummyDataGenerator
 										" WHERE ID(p) = " + productId +
 										" AND ID(o) = " + organizationId +
 										" CREATE (o)-[:ACTIVITY_" + (i % numberOfActivities) + "]->(p)";
-										//" CREATE (o)-[:CARRIES_OUT]->(a:Activity { name:'Activity # " + i + "' })-[:PRODUCES]->(p)";
-					var res = session.Run(statement);
+					//" CREATE (o)-[:CARRIES_OUT]->(a:Activity { name:'Activity # " + i + "' })-[:PRODUCES]->(p)";
+					session.WriteTransaction(tx => tx.Run(statement));
 				}
 			}
 			watch.Stop();
@@ -273,7 +273,7 @@ namespace DummyDataGenerator
 			using(ISession session = connector.Connection.Session())
 			{
 				string statement = "ADD INDEX ON :Organization(name)";
-				IStatementResult res = session.Run(statement); 
+				session.WriteTransaction(tx => tx.Run(statement));
 			}
 		}
 
@@ -292,7 +292,7 @@ namespace DummyDataGenerator
 									", n.numberOfProducts = " + config.NumberOfProducts +
 									", n.numberOfSuppliers = " + config.NumberOfSuppliers +
 									", n.numberOfTopLevelSuppliers = " + config.NumberOfTopLevelSuppliers;
-				IStatementResult res = session.Run(statement);
+				session.WriteTransaction(tx => tx.Run(statement));
 			}
 		}
 
