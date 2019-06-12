@@ -2,6 +2,7 @@
 using System.IO;
 using System.Text;
 using DotNetEnv;
+using DummyDataGenerator.Generators;
 
 namespace DummyDataGenerator
 {
@@ -49,7 +50,7 @@ namespace DummyDataGenerator
 				ReadInt("top level suppliers: ", DEFAULT_NO_OF_TOPLEVELSUPPLIERS),
 				ReadInt("products per top level supplier: ", DEFAULT_NO_OF_PRODUCTS)
 			);
-			Console.WriteLine("Choose your database to import the data into: \n\tN:\tNeo4j\n\tM:\tMySql\n");
+			Console.WriteLine("Choose your database to import the data into: \n\tN:\tNeo4j\n\tA:\tMySQL (adjecency list)\n\tC:\tMySQL (closure table)");
 			ChooseDatabase(conf, Console.ReadKey().Key);
 		}
 
@@ -61,13 +62,17 @@ namespace DummyDataGenerator
 		private static void ChooseDatabase(Configuration conf, ConsoleKey input)
 		{
 			Database database;
-			if (input == ConsoleKey.M)
+			if (input == ConsoleKey.A)
 			{
 				database = new MySqlGenerator();
 			}
 			else if (input == ConsoleKey.N)
 			{
 				database = new Neo4jGenerator();
+			}
+			else if (input == ConsoleKey.C)
+			{
+				database = new MySqlClosureTableGenerator();
 			}
 			else
 			{
