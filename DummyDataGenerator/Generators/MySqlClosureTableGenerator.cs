@@ -8,25 +8,8 @@ using System.Linq;
 
 namespace DummyDataGenerator.Generators
 {
-	class MySqlClosureTableGenerator : Database
+	class MySqlClosureTableGenerator : MySqlGenerator
 	{
-		protected MySqlConnector connector;
-
-		/// <summary>
-		/// Initializes the singleton connection
-		/// </summary>
-		public override void InitializeConnection()
-		{
-			connector = MySqlConnector.Instance();
-		}
-
-		/// <summary>
-		/// Closes the singleton connection
-		/// </summary>
-		public override void CloseConnection()
-		{
-			connector.Close();
-		}
 
 		/// <summary>
 		/// Generates the data with the specified parameters of the configuration
@@ -42,98 +25,6 @@ namespace DummyDataGenerator.Generators
 			AddOrganizationsAndActivitiesToProductTree(config.NumberOfSuppliers, config.NumberOfTopLevelSuppliers, config.NumberOfActivities, config.NumberOfProducts, config.ChainDepth, config.ChainBreadth);
 			AddMetaData(config);
 			Console.WriteLine("Program done, press enter to continue");
-		}
-
-		/// <summary>
-		/// Drops and creates the database, as to start off with a clean sheet
-		/// </summary>
-		private void RefreshDatabaseSchema()
-		{
-			var watch = System.Diagnostics.Stopwatch.StartNew();
-			MySqlScript script = new MySqlScript(connector.Connection, File.ReadAllText("../../../mysql_generate_schema.sql"));
-			try
-			{
-				Console.WriteLine("Executing refresh schema script..");
-				script.Execute();
-			}
-			catch (MySqlException e)
-			{
-				Console.WriteLine("An error ocurred executing the refresh schema script: " + e);
-			}
-			finally
-			{
-				watch.Stop();
-
-			}
-			Console.WriteLine("Refreshed schema in " + watch.ElapsedMilliseconds + "ms " + "(" + (watch.ElapsedMilliseconds / 1000) + "s) ");
-
-			// set autocommit to off
-			string statement = "START TRANSACTION;";
-			MySqlCommand com = new MySqlCommand(statement, connector.Connection);
-			com.ExecuteNonQuery();
-		}
-
-		/// <summary>
-		/// Generates a set number of top level organizations; organizations that do not supply any others
-		/// </summary>
-		/// <param name="organizations">The number of organiations</param>
-		/// <returns>a list of generated organization ids</returns>
-		private int[] GenerateTopLevelOrganizations(int organizations)
-		{
-			List<int> result = new List<int>();
-			var watch = System.Diagnostics.Stopwatch.StartNew();
-			for (int i = 0; i < organizations; i++)
-			{
-				string statement = "INSERT INTO organization(name) VALUES(" + "'TopLevelOrganization #" + (i + 1).ToString() + "');";
-				MySqlCommand com = new MySqlCommand(statement, connector.Connection);
-				com.ExecuteNonQuery();
-				result.Add((int)com.LastInsertedId);
-			}
-			watch.Stop();
-			Console.WriteLine("Took " + watch.ElapsedMilliseconds + "ms " + "(" + (watch.ElapsedMilliseconds / 1000) + "s) " + " to generate " + result.Count + " top level organisations");
-			return result.ToArray();
-		}
-
-		/// <summary>
-		/// Generatea a set number of organizations to be used during the tree generation
-		/// </summary>
-		/// <param name="organizations">The number of organiations</param>
-		/// <returns>a list of generated organization ids</returns>
-		private int[] GenerateOrganizations(int organizations)
-		{
-			List<int> result = new List<int>();
-			var watch = System.Diagnostics.Stopwatch.StartNew();
-			for (int i = 0; i < organizations; i++)
-			{
-				string statement = "INSERT INTO organization(name) VALUES(" + "'Organization #" + (i + 1).ToString() + "');";
-				MySqlCommand com = new MySqlCommand(statement, connector.Connection);
-				com.ExecuteNonQuery();
-				result.Add((int)com.LastInsertedId);
-			}
-			watch.Stop();
-			Console.WriteLine("Took " + watch.ElapsedMilliseconds + "ms " + "(" + (watch.ElapsedMilliseconds / 1000) + "s) " + " to generate " + result.Count + " organisations");
-			return result.ToArray();
-		}
-
-		/// <summary>
-		/// Generatea a set number of activities to be used during tree generation
-		/// </summary>
-		/// <param name="activites">The number of activities to be generated</param>
-		/// <returns>a list of generated activity ids</returns>
-		private int[] GenerateActivities(int activites)
-		{
-			List<int> result = new List<int>();
-			var watch = System.Diagnostics.Stopwatch.StartNew();
-			for (int i = 0; i < activites; i++)
-			{
-				string statement = "INSERT INTO activity(name) VALUES(" + "'Activity #" + (i + 1).ToString() + "');";
-				MySqlCommand com = new MySqlCommand(statement, connector.Connection);
-				com.ExecuteNonQuery();
-				result.Add((int)com.LastInsertedId);
-			}
-			watch.Stop();
-			Console.WriteLine("Took " + watch.ElapsedMilliseconds + "ms " + "(" + (watch.ElapsedMilliseconds / 1000) + "s) " + " to generate " + result.Count + " activities");
-			return result.ToArray();
 		}
 
 		private void GenerateProductTrees(int[] organizationIdentifiers, int productsPerSupplier, int depth, int breadthPerLevel)
@@ -243,14 +134,14 @@ namespace DummyDataGenerator.Generators
 						MySqlCommand com4 = new MySqlCommand(statement4, connector.Connection);
 						string list = (string) com4.ExecuteScalar();
 						productIds = list.Split(',').Select(Int32.Parse).ToList();
-						Console.WriteLine("Parent Product Ids: " + list + " for child " + childProductId);
+						// Console.WriteLine("Parent Product Ids: " + list + " for child " + childProductId);
 
 						// skip the first two id's, because they the first one is referencing themselves, and the second one was already inserted before (initial parent > child relation)
 						for (int k = 2; k < productIds.Count; k++)
 						{
 							// inserto into hierarchy
 							string statement5 = string.Format("INSERT INTO consists_of(parent_product_id, child_product_id) VALUES(" + productIds[k] + "," + childProductId + ");");
-							Console.WriteLine("Inserting: " + productIds[k]);
+							// Console.WriteLine("Inserting: " + productIds[k]);
 							MySqlCommand com5 = new MySqlCommand(statement5, connector.Connection);
 							com5.ExecuteNonQuery();
 						}
@@ -262,96 +153,5 @@ namespace DummyDataGenerator.Generators
 			return childProductsCreated;
 		}
 
-		/// <summary>
-		/// Adds organizations and activities to all the products in the database
-		/// </summary>
-		/// <param name="numberOfOrganizations">the total number of organizations specified</param>
-		/// <param name="numberOfActivites">the total number of activities specified</param>
-		/// <param name="numberOfProducts">the total number of products specified</param>
-		/// ---
-		/// todo: check whether the supplies relation is correctly generated: are the right products assigned to the right orgs + check how to define the right batchsplitfactor
-		/// ---
-		private void AddOrganizationsAndActivitiesToProductTree(int numberOfOrganizations, int numberOfTopLevelOrganizations, int numberOfActivites, int numberOfProducts, int chainDepth, int chainBreadth)
-		{
-			var watch = System.Diagnostics.Stopwatch.StartNew();
-			int count = 0;
-			string statement = "SELECT COUNT(*) FROM product";
-			MySqlCommand com = new MySqlCommand(statement, connector.Connection);
-			object result = com.ExecuteScalar();
-			if (result != null)
-			{
-				count = Convert.ToInt32(result);
-			}
-			else
-			{
-				// if the count isn't returned properly, we calculate what the count should theoretically be
-				count = numberOfTopLevelOrganizations * numberOfOrganizations * (chainBreadth ^ chainDepth);
-				Console.WriteLine("Could not return count, using default: " + count);
-			}
-
-			// the batch split factor is the number of organizations times the number of products they have, to make sure we can always split them without remainder
-			int batchSplitFactor = numberOfProducts * numberOfTopLevelOrganizations;
-
-			for (int i = 0; i < batchSplitFactor; i++)
-			{
-				StringBuilder sCommand = new StringBuilder("INSERT INTO supplies(organization_id, activity_id, product_id) VALUES ");
-				List<string> rows = new List<string>();
-				for (int j = 0; j < count / batchSplitFactor; j++)
-				{
-					int iteratorMultiplier = (j + 1) * (i + 1);
-					rows.Add(string.Format("({0}, {1}, {2})",
-					// add an offset of the toplevel suppliers, which are added first to the database, then modulo if the n.o. products outnumbers the n.o. organizations
-					(iteratorMultiplier % numberOfOrganizations) + 1 + numberOfTopLevelOrganizations,
-					// modulo if the n.o.products outnumbers the n.o. activities
-					(iteratorMultiplier % numberOfActivites) + 1,
-					// use the iterator as the product id
-					iteratorMultiplier));
-
-					//rows.Add(string.Format("('Product #{0}')", j * (i + 1)));
-				}
-				sCommand.Append(string.Join(",", rows));
-				sCommand.Append(";");
-				MySqlCommand com2 = new MySqlCommand(sCommand.ToString(), connector.Connection);
-				com2.ExecuteNonQuery();
-			}
-
-			watch.Stop();
-			Console.WriteLine("Took " + watch.ElapsedMilliseconds + "ms " + "(" + (watch.ElapsedMilliseconds / 1000) + "s) to add organizations and activities to the product tree");
-		}
-
-		/// <summary>
-		/// Adds metadata to a separate table in the database
-		/// </summary>
-		/// <param name="config">The supplied configuration</param>
-		private void AddMetaData(Configuration config)
-		{
-			string statement = "DROP TABLE IF EXISTS `db_meta`; CREATE TABLE `db_meta` (`meta_name` VARCHAR(50), `meta_value` VARCHAR(50)) ENGINE=InnoDB;";
-			MySqlCommand com = new MySqlCommand(statement, connector.Connection);
-			com.ExecuteNonQuery();
-
-			string statement2 = string.Format(
-				"INSERT INTO db_meta(meta_name, meta_value) " +
-				"VALUES('NumberOfActivities', '{0}'), " +
-					"('NumberOfProductsPerTopLevelSupplier', '{1}'), " +
-					"('NumberOfSuppliers', '{2}'), " +
-					"('NumberOfTopLevelSuppliers', '{3}'), " +
-					"('ChainBreadth', '{4}'), " +
-					"('ChainDepth', '{5}')",
-				config.NumberOfActivities,
-				config.NumberOfProducts,
-				config.NumberOfSuppliers,
-				config.NumberOfTopLevelSuppliers,
-				config.ChainBreadth,
-				config.ChainDepth
-			);
-			MySqlCommand com2 = new MySqlCommand(statement2, connector.Connection);
-			com2.ExecuteNonQuery();
-			Console.WriteLine("Added metadata to the database");
-
-			// commit changes
-			string statement3 = "COMMIT;";
-			MySqlCommand com3 = new MySqlCommand(statement3, connector.Connection);
-			com3.ExecuteNonQuery();
-		}
 	}
 }

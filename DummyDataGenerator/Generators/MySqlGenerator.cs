@@ -48,7 +48,7 @@ namespace DummyDataGenerator
 		/// <summary>
 		/// Drops and creates the database, as to start off with a clean sheet
 		/// </summary>
-		private void RefreshDatabaseSchema()
+		protected void RefreshDatabaseSchema()
 		{
 			var watch = System.Diagnostics.Stopwatch.StartNew();
 			MySqlScript script = new MySqlScript(connector.Connection, File.ReadAllText("../../../mysql_generate_schema.sql"));
@@ -79,7 +79,7 @@ namespace DummyDataGenerator
 		/// </summary>
 		/// <param name="organizations">The number of organiations</param>
 		/// <returns>a list of generated organization ids</returns>
-		private int[] GenerateTopLevelOrganizations(int organizations)
+		protected int[] GenerateTopLevelOrganizations(int organizations)
 		{
 			List<int> result = new List<int>();
 			var watch = System.Diagnostics.Stopwatch.StartNew();
@@ -100,7 +100,7 @@ namespace DummyDataGenerator
 		/// </summary>
 		/// <param name="organizations">The number of organiations</param>
 		/// <returns>a list of generated organization ids</returns>
-		private int[] GenerateOrganizations(int organizations)
+		protected int[] GenerateOrganizations(int organizations)
 		{
 			List<int> result = new List<int>();
 			var watch = System.Diagnostics.Stopwatch.StartNew();
@@ -121,7 +121,7 @@ namespace DummyDataGenerator
 		/// </summary>
 		/// <param name="activites">The number of activities to be generated</param>
 		/// <returns>a list of generated activity ids</returns>
-		private int[] GenerateActivities(int activites)
+		protected int[] GenerateActivities(int activites)
 		{
 			List<int> result = new List<int>();
 			var watch = System.Diagnostics.Stopwatch.StartNew();
@@ -235,7 +235,7 @@ namespace DummyDataGenerator
 		/// ---
 		/// todo: check whether the supplies relation is correctly generated: are the right products assigned to the right orgs + check how to define the right batchsplitfactor
 		/// ---
-		private void AddOrganizationsAndActivitiesToProductTree(int numberOfOrganizations, int numberOfTopLevelOrganizations, int numberOfActivites, int numberOfProducts, int chainDepth, int chainBreadth)
+		protected void AddOrganizationsAndActivitiesToProductTree(int numberOfOrganizations, int numberOfTopLevelOrganizations, int numberOfActivites, int numberOfProducts, int chainDepth, int chainBreadth)
 		{
 			var watch = System.Diagnostics.Stopwatch.StartNew();
 			int count = 0;
@@ -287,7 +287,7 @@ namespace DummyDataGenerator
 		/// Adds metadata to a separate table in the database
 		/// </summary>
 		/// <param name="config">The supplied configuration</param>
-		private void AddMetaData(Configuration config)
+		protected void AddMetaData(Configuration config)
 		{
 			string statement = "DROP TABLE IF EXISTS `db_meta`; CREATE TABLE `db_meta` (`meta_name` VARCHAR(50), `meta_value` VARCHAR(50)) ENGINE=InnoDB;";
 			MySqlCommand com = new MySqlCommand(statement, connector.Connection);
