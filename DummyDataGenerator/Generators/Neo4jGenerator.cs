@@ -62,7 +62,7 @@ namespace DummyDataGenerator
 			{
 				for (int i = 0; i < organizations; i++)
 				{
-					string statement = "CREATE (n:Organization { name: 'Top Level Organization #" + i + "' }) RETURN ID(n) AS id";
+					string statement = CypherInsertOrganization(true, i);
 					IStatementResult res = session.Run(statement);
 					IRecord record = res.Peek();
 					int id = record["id"].As<int>();
@@ -87,7 +87,7 @@ namespace DummyDataGenerator
 			{
 				for (int i = 0; i < organizations; i++)
 				{
-					string statement = "CREATE (n:Organization { name: 'Organization #" + i + "' }) RETURN ID(n) AS id";
+					string statement = CypherInsertOrganization(false, i);
 					IStatementResult res = session.WriteTransaction(tx => tx.Run(statement));
 					IRecord record = res.Peek();
 					int id = record["id"].As<int>();
@@ -148,7 +148,8 @@ namespace DummyDataGenerator
 					// generate the top level product
 					using (ISession session = connector.Connection.Session())
 					{
-						string statement = "CREATE (n:Product { name: 'TopLevelProduct #o" + (i + 1) + "-p" + (j + 1) + "' }) RETURN ID(n) AS id";
+						//string statement = "CREATE (n:Product { name: 'TopLevelProduct #o" + (i + 1) + "-p" + (j + 1) + "' }) RETURN ID(n) AS id";
+						string statement = CypherInsertProduct(true, i * productsPerSupplier + j);
 						IStatementResult res = session.WriteTransaction(tx => tx.Run(statement));
 						IRecord record = res.Peek();
 						topLevelId = record["id"].As<int>();
@@ -201,7 +202,8 @@ namespace DummyDataGenerator
 					// first insert the product
 					using (ISession session = connector.Connection.Session())
 					{
-						string statement = "CREATE (n:Product { name: 'Product #c" + (chainId + 1) + "-p" + (i + 1) + "-p" + (j + 1) + "' }) RETURN ID(n) AS id";
+						// string statement = "CREATE (n:Product { name: 'Product #c" + (chainId + 1) + "-p" + (i + 1) + "-p" + (j + 1) + "' }) RETURN ID(n) AS id";
+						string statement = CypherInsertProduct(false, parentProductIdentifiers[i] * 2 + j);
 						IStatementResult res = session.WriteTransaction(tx => tx.Run(statement));
 						IRecord record = res.Peek();
 						childProductId = record["id"].As<int>();
@@ -235,7 +237,6 @@ namespace DummyDataGenerator
 			using (ISession session = connector.Connection.Session())
 			{
 				string statement =	"MATCH (n:Product)" +
-									" WHERE n.name STARTS WITH 'Product'" +
 									" RETURN ID(n) AS id";
 				IStatementResult res = session.WriteTransaction(tx => tx.Run(statement));
 				foreach (IRecord r in res)
@@ -256,7 +257,7 @@ namespace DummyDataGenerator
 					string statement = "MATCH (p:Product), (o:Organization)" +
 										" WHERE ID(p) = " + productId +
 										" AND ID(o) = " + organizationId +
-										" CREATE (o)-[:ACTIVITY_" + (i % numberOfActivities) + "]->(p)";
+										" CREATE (o)-[:ACTIVITY_" + (i % numberOfActivities) + CypherInsertActivityProperties(i) + "]->(p)";
 					//" CREATE (o)-[:CARRIES_OUT]->(a:Activity { name:'Activity # " + i + "' })-[:PRODUCES]->(p)";
 					session.WriteTransaction(tx => tx.Run(statement));
 				}

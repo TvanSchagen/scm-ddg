@@ -83,6 +83,7 @@ namespace DummyDataGenerator
 			Console.WriteLine("\nInitializing connection");
 			database.InitializeConnection();
 			Console.WriteLine("Attempting to generate data");
+			database.GenerateFakeData(conf);
 			database.GenerateData(conf);
 			Console.WriteLine("Closing connection");
 			database.CloseConnection();

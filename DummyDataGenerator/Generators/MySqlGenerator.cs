@@ -85,9 +85,16 @@ namespace DummyDataGenerator
 			var watch = System.Diagnostics.Stopwatch.StartNew();
 			for (int i = 0; i < organizations; i++)
 			{
-				string statement = "INSERT INTO organization(name) VALUES(" + "'TopLevelOrganization #" + (i + 1).ToString() + "');";
-				MySqlCommand com = new MySqlCommand(statement, connector.Connection);
-				com.ExecuteNonQuery();
+				MySqlCommand com = SqlInsertOrganization(true, i, connector.Connection);
+				
+				try
+				{
+					com.ExecuteNonQuery();
+				}
+				catch (MySqlException e)
+				{
+					Console.WriteLine(e);
+				}
 				result.Add((int)com.LastInsertedId);
 			}
 			watch.Stop();
@@ -106,8 +113,7 @@ namespace DummyDataGenerator
 			var watch = System.Diagnostics.Stopwatch.StartNew();
 			for (int i = 0; i < organizations; i++)
 			{
-				string statement = "INSERT INTO organization(name) VALUES(" + "'Organization #" + (i + 1).ToString() + "');";
-				MySqlCommand com = new MySqlCommand(statement, connector.Connection);
+				MySqlCommand com = SqlInsertOrganization(false, i, connector.Connection);
 				com.ExecuteNonQuery();
 				result.Add((int)com.LastInsertedId);
 			}
@@ -127,8 +133,7 @@ namespace DummyDataGenerator
 			var watch = System.Diagnostics.Stopwatch.StartNew();
 			for (int i = 0; i < activites; i++)
 			{
-				string statement = "INSERT INTO activity(name) VALUES(" + "'Activity #" + (i + 1).ToString() + "');";
-				MySqlCommand com = new MySqlCommand(statement, connector.Connection);
+				MySqlCommand com = SqlInsertActivity(i, connector.Connection);
 				com.ExecuteNonQuery();
 				result.Add((int)com.LastInsertedId);
 			}
@@ -158,8 +163,8 @@ namespace DummyDataGenerator
 					var watch = System.Diagnostics.Stopwatch.StartNew();
 
 					// generate the top level product
-					string statement = "INSERT INTO product(name) VALUES(" + "'Top Level Product #o" + (i + 1) + "-p" + (j + 1) + "');";
-					MySqlCommand com = new MySqlCommand(statement, connector.Connection);
+					//string statement = "INSERT INTO product(name) VALUES(" + "'Top Level Product #o" + (i + 1) + "-p" + (j + 1) + "');";
+					MySqlCommand com = SqlInsertProduct(true, i * productsPerSupplier + j, connector.Connection);
 					com.ExecuteNonQuery();
 					int topLevelId = (int) com.LastInsertedId;
 
@@ -210,10 +215,10 @@ namespace DummyDataGenerator
 				for (int j = 0; j < breadthPerLevel; j++)
 				{
 					// first insert the product
-					string statement = "INSERT INTO product(name) VALUES(" + "'Product #c" + (chainId + 1) + "-d" + depth + "-p" + (i + 1) + "-b" + (j + 1) + "');";
-					MySqlCommand com = new MySqlCommand(statement, connector.Connection);
+					//string statement = "INSERT INTO product(name) VALUES(" + "'Product #c" + (chainId + 1) + "-d" + depth + "-p" + (i + 1) + "-b" + (j + 1) + "');";
+					MySqlCommand com = SqlInsertProduct(false, item * 2 + j, connector.Connection);
 					com.ExecuteNonQuery();
-					int childProductId = (int)com.LastInsertedId;
+					int childProductId = (int) com.LastInsertedId;
 					childProductsCreated.Add(childProductId);
 
 					// then create the relation for the product hierarchy

@@ -1,5 +1,5 @@
-CREATE DATABASE  IF NOT EXISTS `scm_ct_breadth2_depth10` /*!40100 DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci */ /*!80016 DEFAULT ENCRYPTION='N' */;
-USE `scm_ct_breadth2_depth10`;
+CREATE DATABASE  IF NOT EXISTS `TEST_scm_al_breadth2_depth2` /*!40100 DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci */ /*!80016 DEFAULT ENCRYPTION='N' */;
+USE `TEST_scm_al_breadth2_depth2`;
 -- MySQL dump 10.13  Distrib 8.0.16, for Win64 (x86_64)
 --
 -- Host: localhost    Database: scm_test_dummy_generated_v2
@@ -26,7 +26,11 @@ DROP TABLE IF EXISTS `activity`;
  SET character_set_client = utf8mb4 ;
 CREATE TABLE `activity` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
+  `GUID` char(36) NULL,
   `name` varchar(256) NOT NULL,
+  `description` TEXT NULL,
+  `created` DATETIME NULL,
+  `last_updated` DATETIME NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=0 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -59,7 +63,15 @@ DROP TABLE IF EXISTS `organization`;
  SET character_set_client = utf8mb4 ;
 CREATE TABLE `organization` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
+  `GUID` char(36) NULL,
   `name` varchar(256) NOT NULL,
+  `description` TEXT NULL,
+  `ein` char(16) NULL,
+  `number_of_employees` int(11) NULL,
+  `email_address` varchar(256) NULL,
+  `website` varchar(256) NULL,
+  `created` DATETIME NULL,
+  `last_updated` DATETIME NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=0 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -73,7 +85,14 @@ DROP TABLE IF EXISTS `product`;
  SET character_set_client = utf8mb4 ;
 CREATE TABLE `product` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
-  `name` varchar(256) DEFAULT NULL,
+  `GUID` char(36) NULL,
+  `name` varchar(256) NOT NULL,
+  `description` TEXT NULL,
+  `ean` char(13) NULL,
+  `category` char(128) NULL,
+  `sub_category` char(128) NULL,
+  `created` DATETIME NULL,
+  `last_updated` DATETIME NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=0 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
