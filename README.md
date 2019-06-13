@@ -16,8 +16,8 @@ Execute using Visual Studio 2017 or higher.
 ### Current Database Support
 Database | Type | Support
 --- | --- | ---
-MySQL | Relational | 90%
-Neo4j | Graph |90%
+MySQL | Relational | 100%
+Neo4j | Graph |100%
 SQL Server | Relational | 0%
 PostgreSQL | Relational | 0%
 Titan  | Graph | 0%

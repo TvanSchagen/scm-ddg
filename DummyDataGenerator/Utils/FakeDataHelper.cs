@@ -41,6 +41,32 @@ namespace DummyDataGenerator.Utils
 		public DateTime LastUpdatedDate { get; set; }
 	}
 
+	public class Location
+	{
+		public string Country { get; set; }
+		public string PostalCode { get; set; }
+		public string Province { get; set; }
+		public string City { get; set; }
+		public string District { get; set; }
+		public string Street { get; set; }
+		public string GPSCoordinates { get; set; }
+	}
+
+	public class Certificate
+	{
+		// ????
+	}
+
+	public class Ingredient
+	{
+		// ????
+	}
+
+	public class RawMaterial
+	{
+		// ????
+	}
+
 	class FakeDataHelper
 	{
 		const int SEED = 1234;
