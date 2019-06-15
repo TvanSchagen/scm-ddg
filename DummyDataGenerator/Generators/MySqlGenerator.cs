@@ -237,9 +237,6 @@ namespace DummyDataGenerator
 		/// <param name="numberOfOrganizations">the total number of organizations specified</param>
 		/// <param name="numberOfActivites">the total number of activities specified</param>
 		/// <param name="numberOfProducts">the total number of products specified</param>
-		/// ---
-		/// todo: check whether the supplies relation is correctly generated: are the right products assigned to the right orgs + check how to define the right batchsplitfactor
-		/// ---
 		protected void AddOrganizationsAndActivitiesToProductTree(int numberOfOrganizations, int numberOfTopLevelOrganizations, int numberOfActivites, int numberOfProducts, int chainDepth, int chainBreadth)
 		{
 			var watch = System.Diagnostics.Stopwatch.StartNew();

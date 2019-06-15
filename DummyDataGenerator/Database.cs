@@ -1,5 +1,6 @@
 ﻿using DummyDataGenerator.Utils;
 using MySql.Data.MySqlClient;
+using Neo4j.Driver.V1;
 using System;
 using System.Collections.Generic;
 
@@ -17,6 +18,10 @@ namespace DummyDataGenerator
 
         public abstract void CloseConnection();
 
+		/// <summary>
+		/// Fills the organizations, products and activity objects with data for the specified configuration
+		/// </summary>
+		/// <param name="conf"></param>
 		public void GenerateFakeData(Configuration conf)
 		{
 			var watch = System.Diagnostics.Stopwatch.StartNew();
@@ -87,15 +92,15 @@ namespace DummyDataGenerator
 		{
 			id = id % products.Count;
 			string result = "CREATE (n:Product { " + 
-				string.Format("GUID: \"{0}\", name: \"{1}\", description: \"{2}\", ean : \"{3}\", category: \"{4}\", sub_category: \"{5}\", created: \"{6}\", last_updated: \"{7}\"",
+				string.Format("GUID: \"{0}\", name: \"{1}\", description: \"{2}\", ean : \"{3}\", category: \"{4}\", sub_category: \"{5}\", created: datetime('{6}'), last_updated: datetime('{7}')",
 					products[id].GUID,
 					isTopLevel ? "Top Level Product " + products[id].Name : products[id].Name,
 					products[id].Description,
 					products[id].EANCode,
 					products[id].Category,
 					products[id].SubCategory,
-					products[id].CreatedDate,
-					products[id].LastUpdatedDate
+					new LocalDateTime(products[id].CreatedDate),
+					new LocalDateTime(products[id].LastUpdatedDate)
 				) + 
 				"}) RETURN ID(n) AS id";
 			return result;
@@ -105,12 +110,12 @@ namespace DummyDataGenerator
 		{
 			id = id % activities.Count;
 			string result = " { " +
-				string.Format("GUID: \"{0}\", name: \"{1}\", description: \"{2}\", created: \"{3}\", last_updated: \"{4}\"",
+				string.Format("GUID: \"{0}\", name: \"{1}\", description: \"{2}\", created: datetime('{3}'), last_updated: datetime('{4}')",
 					activities[id].GUID,
 					activities[id].Name,
 					activities[id].Description,
-					activities[id].CreatedDate,
-					activities[id].LastUpdatedDate
+					new LocalDateTime(activities[id].CreatedDate),
+					new LocalDateTime(activities[id].LastUpdatedDate)
 				) +
 				"}";
 			return result;
@@ -120,7 +125,7 @@ namespace DummyDataGenerator
 		{
 			id = id % products.Count;
 			string result = "CREATE (n:Organization { " +
-				string.Format("GUID: \"{0}\", name: \"{1}\", description: \"{2}\", ein : \"{3}\", number_of_employees: \"{4}\", email_address: \"{5}\", website: \"{6}\", created: \"{7}\", last_updated: \"{8}\"",
+				string.Format("GUID: \"{0}\", name: \"{1}\", description: \"{2}\", ein : \"{3}\", number_of_employees: {4}, email_address: \"{5}\", website: \"{6}\", created: datetime('{7}'), last_updated: datetime('{8}')",
 					organizations[id].GUID,
 					isTopLevel ? "Top Level Organization " + organizations[id].Name : organizations[id].Name,
 					organizations[id].Description,
@@ -128,8 +133,8 @@ namespace DummyDataGenerator
 					organizations[id].NumberOfEmployees,
 					organizations[id].EmailAddress,
 					organizations[id].WebsiteURL,
-					organizations[id].CreatedDate,
-					organizations[id].LastUpdatedDate
+					new LocalDateTime(organizations[id].CreatedDate),
+					new LocalDateTime(organizations[id].LastUpdatedDate)
 				) +
 				"}) RETURN ID(n) AS id";
 			return result;

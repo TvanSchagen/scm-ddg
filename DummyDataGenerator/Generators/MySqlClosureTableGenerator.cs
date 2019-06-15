@@ -27,6 +27,13 @@ namespace DummyDataGenerator.Generators
 			Console.WriteLine("Program done, press enter to continue");
 		}
 
+		/// <summary>
+		/// 
+		/// </summary>
+		/// <param name="organizationIdentifiers"></param>
+		/// <param name="productsPerSupplier"></param>
+		/// <param name="depth"></param>
+		/// <param name="breadthPerLevel"></param>
 		private void GenerateProductTrees(int[] organizationIdentifiers, int productsPerSupplier, int depth, int breadthPerLevel)
 		{
 			var watchTotal = System.Diagnostics.Stopwatch.StartNew();
@@ -66,14 +73,14 @@ namespace DummyDataGenerator.Generators
 							previousResults.Add(topLevelId);
 							// also add the top level id to all results (because it isn't returned as childs when generating the product row and relations)
 							allResults.Add(topLevelId);
-							previousResults = GenerateProductRowAndRelations(i, k + 1, null, previousResults, breadthPerLevel);
+							previousResults = GenerateProductRowAndRelations(null, previousResults, breadthPerLevel);
 							allResults.AddRange(previousResults);
 
 						}
 						// in subsequent passes, take the previous row of products and generate a new underlying row for all of them
 						else
 						{
-							previousResults = GenerateProductRowAndRelations(i, k + 1, allResults, previousResults, breadthPerLevel);
+							previousResults = GenerateProductRowAndRelations(allResults, previousResults, breadthPerLevel);
 							allResults.AddRange(previousResults);
 						}
 
@@ -84,21 +91,18 @@ namespace DummyDataGenerator.Generators
 				}
 			}
 			watchTotal.Stop();
-			Console.WriteLine("Took " + watchTotal.ElapsedMilliseconds + "ms " + "(" + (watchTotal.ElapsedMilliseconds / 1000) + "s) in total");
+			Console.WriteLine("Took " + watchTotal.ElapsedMilliseconds + "ms " + "(" + (watchTotal.ElapsedMilliseconds / 1000) + "s)" + "(" + (watchTotal.ElapsedMilliseconds / 1000 / 60) + "m) in total");
 		}
 
 
 		/// <summary>
 		/// Adds a single row to a single product hierarchy
 		/// </summary>
-		/// <param name="chainId">an identifier for a chain, to more clearly identify the products associated to this chain in the database</param>
-		/// <param name="parentProductIdentifiers">the list of parent products for which a number of child products has to be generated</param>
+		/// <param name="parentProductIdentifiers">the list of all previous parent products for which a number of child products has to be generated</param>
+		/// <param name="immediateParentProductIdentifiers">the list of parent products for which a number of child products has to be generated</param>
 		/// <param name="breadthPerLevel">the number of child products that have to be generated per parent product</param>
 		/// <returns>a list of the id's of the child products that have been created</returns>
-		/// ---
-		/// TO DO: fix a bug -> currently, when generating chains each child level adds relations for all the parent products, even if they are in another branch of the tree
-		/// ---
-		private List<int> GenerateProductRowAndRelations(int chainId, int depth, List<int> allParentProductIdentifiers, List<int> immediateParentProductIdentifiers, int breadthPerLevel)
+		private List<int> GenerateProductRowAndRelations(List<int> allParentProductIdentifiers, List<int> immediateParentProductIdentifiers, int breadthPerLevel)
 		{
 			List<int> childProductsCreated = new List<int>();
 			int i = 0;
