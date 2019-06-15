@@ -237,7 +237,7 @@ namespace DummyDataGenerator
 		/// <param name="numberOfOrganizations">the total number of organizations specified</param>
 		/// <param name="numberOfActivites">the total number of activities specified</param>
 		/// <param name="numberOfProducts">the total number of products specified</param>
-		protected void AddOrganizationsAndActivitiesToProductTree(int numberOfOrganizations, int numberOfTopLevelOrganizations, int numberOfActivites, int numberOfProducts, int chainDepth, int chainBreadth)
+		protected void AddOrganizationsAndActivitiesToProductTree(int numberOfOrganizations, int numberOfTopLevelOrganizations, int numberOfActivities, int numberOfProducts, int chainDepth, int chainBreadth)
 		{
 			var watch = System.Diagnostics.Stopwatch.StartNew();
 			int count = 0;
@@ -251,33 +251,21 @@ namespace DummyDataGenerator
 			else
 			{
 				// if the count isn't returned properly, we calculate what the count should theoretically be
-				count = numberOfTopLevelOrganizations * numberOfOrganizations * (chainBreadth ^ chainDepth);
+				count = numberOfTopLevelOrganizations * numberOfOrganizations * ((chainBreadth ^ chainDepth) - 1);
 				Console.WriteLine("Could not return count, using default: " + count);
 			}
 
-			// the batch split factor is the number of organizations times the number of products they have, to make sure we can always split them without remainder
-			int batchSplitFactor = numberOfProducts * numberOfTopLevelOrganizations;
-
-			for (int i = 0; i < batchSplitFactor; i++)
+			for (int i = 0; i < count; i++)
 			{
-				StringBuilder sCommand = new StringBuilder("INSERT INTO supplies(organization_id, activity_id, product_id) VALUES ");
-				List<string> rows = new List<string>();
-				for (int j = 0; j < count / batchSplitFactor; j++)
-				{
-					int iteratorMultiplier = (j + 1) * (i + 1);
-					rows.Add(string.Format("({0}, {1}, {2})",
+				string statement2 = string.Format("INSERT INTO supplies(organization_id, activity_id, product_id) VALUES({0}, {1}, {2});",
 					// add an offset of the toplevel suppliers, which are added first to the database, then modulo if the n.o. products outnumbers the n.o. organizations
-					(iteratorMultiplier % numberOfOrganizations) + 1 + numberOfTopLevelOrganizations,
+					(i % numberOfOrganizations) + numberOfTopLevelOrganizations + 1, // numberOfOrganizations + 1 + numberOfTopLevelOrganizations,
 					// modulo if the n.o.products outnumbers the n.o. activities
-					(iteratorMultiplier % numberOfActivites) + 1,
+					i % numberOfActivities + 1,
 					// use the iterator as the product id
-					iteratorMultiplier));
-
-					//rows.Add(string.Format("('Product #{0}')", j * (i + 1)));
-				}
-				sCommand.Append(string.Join(",", rows));
-				sCommand.Append(";");
-				MySqlCommand com2 = new MySqlCommand(sCommand.ToString(), connector.Connection);
+					i + 1);
+				Console.WriteLine(statement2);
+				MySqlCommand com2 = new MySqlCommand(statement2, connector.Connection);
 				com2.ExecuteNonQuery();
 			}
 
