@@ -264,7 +264,6 @@ namespace DummyDataGenerator
 					i % numberOfActivities + 1,
 					// use the iterator as the product id
 					i + 1);
-				Console.WriteLine(statement2);
 				MySqlCommand com2 = new MySqlCommand(statement2, connector.Connection);
 				com2.ExecuteNonQuery();
 			}
