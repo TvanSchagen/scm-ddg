@@ -4,7 +4,6 @@ using System.IO;
 using System.Text;
 using DummyDataGenerator.Connectors;
 using MySql.Data.MySqlClient;
-// add fakedata generator
 
 namespace DummyDataGenerator
 {
@@ -85,7 +84,7 @@ namespace DummyDataGenerator
 			var watch = System.Diagnostics.Stopwatch.StartNew();
 			for (int i = 0; i < organizations; i++)
 			{
-				MySqlCommand com = SqlInsertOrganization(true, i, connector.Connection);
+				MySqlCommand com = InsertOrganization(true, i, connector.Connection);
 				
 				try
 				{
@@ -113,7 +112,7 @@ namespace DummyDataGenerator
 			var watch = System.Diagnostics.Stopwatch.StartNew();
 			for (int i = 0; i < organizations; i++)
 			{
-				MySqlCommand com = SqlInsertOrganization(false, i, connector.Connection);
+				MySqlCommand com = InsertOrganization(false, i, connector.Connection);
 				com.ExecuteNonQuery();
 				result.Add((int)com.LastInsertedId);
 			}
@@ -133,7 +132,7 @@ namespace DummyDataGenerator
 			var watch = System.Diagnostics.Stopwatch.StartNew();
 			for (int i = 0; i < activites; i++)
 			{
-				MySqlCommand com = SqlInsertActivity(i, connector.Connection);
+				MySqlCommand com = InsertActivity(i, connector.Connection);
 				com.ExecuteNonQuery();
 				result.Add((int)com.LastInsertedId);
 			}
@@ -164,7 +163,7 @@ namespace DummyDataGenerator
 
 					// generate the top level product
 					//string statement = "INSERT INTO product(name) VALUES(" + "'Top Level Product #o" + (i + 1) + "-p" + (j + 1) + "');";
-					MySqlCommand com = SqlInsertProduct(true, i * productsPerSupplier + j, connector.Connection);
+					MySqlCommand com = InsertProduct(true, i * productsPerSupplier + j, connector.Connection);
 					com.ExecuteNonQuery();
 					int topLevelId = (int) com.LastInsertedId;
 
@@ -216,7 +215,7 @@ namespace DummyDataGenerator
 				{
 					// first insert the product
 					//string statement = "INSERT INTO product(name) VALUES(" + "'Product #c" + (chainId + 1) + "-d" + depth + "-p" + (i + 1) + "-b" + (j + 1) + "');";
-					MySqlCommand com = SqlInsertProduct(false, item * 2 + j, connector.Connection);
+					MySqlCommand com = InsertProduct(false, item * 2 + j, connector.Connection);
 					com.ExecuteNonQuery();
 					int childProductId = (int) com.LastInsertedId;
 					childProductsCreated.Add(childProductId);
@@ -305,6 +304,61 @@ namespace DummyDataGenerator
 			string statement3 = "COMMIT;";
 			MySqlCommand com3 = new MySqlCommand(statement3, connector.Connection);
 			com3.ExecuteNonQuery();
+		}
+
+		public MySqlCommand InsertProduct(bool isTopLevel, int id, MySqlConnection conn)
+		{
+			// this prevents the id from ever going out of range of the list
+			id = id % products.Count;
+			MySqlCommand com = new MySqlCommand();
+			com.CommandText = "INSERT INTO product(`GUID`, `name`, `description`, `ean`, `category`, `sub_category`, `created`, `last_updated`) VALUES(@GUID, @name, @description, @ean, @category, @sub_category, @created, @last_updated);";
+			com.Connection = conn;
+			com.Prepare();
+			com.Parameters.AddWithValue("@GUID", products[id].GUID);
+			com.Parameters.AddWithValue("@name", isTopLevel ? "Top Level Product " + products[id].Name : products[id].Name);
+			com.Parameters.AddWithValue("@description", products[id].Description);
+			com.Parameters.AddWithValue("@ean", products[id].EANCode);
+			com.Parameters.AddWithValue("@category", products[id].Category);
+			com.Parameters.AddWithValue("@sub_category", products[id].SubCategory);
+			com.Parameters.AddWithValue("@created", products[id].CreatedDate);
+			com.Parameters.AddWithValue("@last_updated", products[id].LastUpdatedDate);
+			return com;
+		}
+
+		public MySqlCommand InsertActivity(int id, MySqlConnection conn)
+		{
+			// this prevents the id from ever going out of range of the list
+			id = id % activities.Count;
+			MySqlCommand com = new MySqlCommand();
+			com.CommandText = "INSERT INTO activity(`GUID`, `name`, `description`, `created`, `last_updated`) VALUES(@GUID, @name, @description, @created, @last_updated);";
+			com.Connection = conn;
+			com.Prepare();
+			com.Parameters.AddWithValue("@GUID", activities[id].GUID);
+			com.Parameters.AddWithValue("@name", activities[id].Name);
+			com.Parameters.AddWithValue("@description", activities[id].Description);
+			com.Parameters.AddWithValue("@created", activities[id].CreatedDate);
+			com.Parameters.AddWithValue("@last_updated", activities[id].LastUpdatedDate);
+			return com;
+		}
+
+		public MySqlCommand InsertOrganization(bool isTopLevel, int id, MySqlConnection conn)
+		{
+			// this prevents the id from ever going out of range of the list
+			id = id % organizations.Count;
+			MySqlCommand com = new MySqlCommand();
+			com.CommandText = "INSERT INTO organization(`GUID`, `name`, `description`, `ein`, `number_of_employees`, `email_address`, `website`, `created`, `last_updated`) VALUES(@GUID, @name, @description, @ein, @number_of_employees, @email_address, @website, @created, @last_updated);";
+			com.Connection = conn;
+			com.Prepare();
+			com.Parameters.AddWithValue("@GUID", organizations[id].GUID);
+			com.Parameters.AddWithValue("@name", isTopLevel ? "Top Level Organization " + organizations[id].Name : organizations[id].Name);
+			com.Parameters.AddWithValue("@description", organizations[id].Description);
+			com.Parameters.AddWithValue("@ein", organizations[id].EmployerIdentificationNumber);
+			com.Parameters.AddWithValue("@number_of_employees", organizations[id].NumberOfEmployees);
+			com.Parameters.AddWithValue("@email_address", organizations[id].EmailAddress);
+			com.Parameters.AddWithValue("@website", organizations[id].WebsiteURL);
+			com.Parameters.AddWithValue("@created", organizations[id].CreatedDate);
+			com.Parameters.AddWithValue("@last_updated", organizations[id].LastUpdatedDate);
+			return com;
 		}
 
 	}

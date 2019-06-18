@@ -62,7 +62,7 @@ namespace DummyDataGenerator
 			{
 				for (int i = 0; i < organizations; i++)
 				{
-					string statement = CypherInsertOrganization(true, i);
+					string statement = InsertOrganization(true, i);
 					IStatementResult res = session.Run(statement);
 					IRecord record = res.Peek();
 					int id = record["id"].As<int>();
@@ -87,7 +87,7 @@ namespace DummyDataGenerator
 			{
 				for (int i = 0; i < organizations; i++)
 				{
-					string statement = CypherInsertOrganization(false, i);
+					string statement = InsertOrganization(false, i);
 					IStatementResult res = session.WriteTransaction(tx => tx.Run(statement));
 					IRecord record = res.Peek();
 					int id = record["id"].As<int>();
@@ -149,7 +149,7 @@ namespace DummyDataGenerator
 					using (ISession session = connector.Connection.Session())
 					{
 						//string statement = "CREATE (n:Product { name: 'TopLevelProduct #o" + (i + 1) + "-p" + (j + 1) + "' }) RETURN ID(n) AS id";
-						string statement = CypherInsertProduct(true, i * productsPerSupplier + j);
+						string statement = InsertProduct(true, i * productsPerSupplier + j);
 						IStatementResult res = session.WriteTransaction(tx => tx.Run(statement));
 						IRecord record = res.Peek();
 						topLevelId = record["id"].As<int>();
@@ -203,7 +203,7 @@ namespace DummyDataGenerator
 					using (ISession session = connector.Connection.Session())
 					{
 						// string statement = "CREATE (n:Product { name: 'Product #c" + (chainId + 1) + "-p" + (i + 1) + "-p" + (j + 1) + "' }) RETURN ID(n) AS id";
-						string statement = CypherInsertProduct(false, parentProductIdentifiers[i] * 2 + j);
+						string statement = InsertProduct(false, parentProductIdentifiers[i] * 2 + j);
 						IStatementResult res = session.WriteTransaction(tx => tx.Run(statement));
 						IRecord record = res.Peek();
 						childProductId = record["id"].As<int>();
@@ -257,7 +257,7 @@ namespace DummyDataGenerator
 					string statement = "MATCH (p:Product), (o:Organization)" +
 										" WHERE ID(p) = " + productId +
 										" AND ID(o) = " + organizationId +
-										" CREATE (o)-[:ACTIVITY_" + (i % numberOfActivities) + CypherInsertActivityProperties(i) + "]->(p)";
+										" CREATE (o)-[:ACTIVITY_" + (i % numberOfActivities) + InsertActivity(i) + "]->(p)";
 					//" CREATE (o)-[:CARRIES_OUT]->(a:Activity { name:'Activity # " + i + "' })-[:PRODUCES]->(p)";
 					session.WriteTransaction(tx => tx.Run(statement));
 				}
@@ -301,5 +301,59 @@ namespace DummyDataGenerator
         {
 			connector?.Close();
         }
-    }
+
+
+		public string InsertProduct(bool isTopLevel, int id)
+		{
+			id = id % products.Count;
+			string result = "CREATE (n:Product { " +
+				string.Format("GUID: \"{0}\", name: \"{1}\", description: \"{2}\", ean : \"{3}\", category: \"{4}\", sub_category: \"{5}\", created: datetime('{6}'), last_updated: datetime('{7}')",
+					products[id].GUID,
+					isTopLevel ? "Top Level Product " + products[id].Name : products[id].Name,
+					products[id].Description,
+					products[id].EANCode,
+					products[id].Category,
+					products[id].SubCategory,
+					new LocalDateTime(products[id].CreatedDate),
+					new LocalDateTime(products[id].LastUpdatedDate)
+				) +
+				"}) RETURN ID(n) AS id";
+			return result;
+		}
+
+		public string InsertActivity(int id)
+		{
+			id = id % activities.Count;
+			string result = " { " +
+				string.Format("GUID: \"{0}\", name: \"{1}\", description: \"{2}\", created: datetime('{3}'), last_updated: datetime('{4}')",
+					activities[id].GUID,
+					activities[id].Name,
+					activities[id].Description,
+					new LocalDateTime(activities[id].CreatedDate),
+					new LocalDateTime(activities[id].LastUpdatedDate)
+				) +
+				"}";
+			return result;
+		}
+
+		public string InsertOrganization(bool isTopLevel, int id)
+		{
+			id = id % products.Count;
+			string result = "CREATE (n:Organization { " +
+				string.Format("GUID: \"{0}\", name: \"{1}\", description: \"{2}\", ein : \"{3}\", number_of_employees: {4}, email_address: \"{5}\", website: \"{6}\", created: datetime('{7}'), last_updated: datetime('{8}')",
+					organizations[id].GUID,
+					isTopLevel ? "Top Level Organization " + organizations[id].Name : organizations[id].Name,
+					organizations[id].Description,
+					organizations[id].EmployerIdentificationNumber,
+					organizations[id].NumberOfEmployees,
+					organizations[id].EmailAddress,
+					organizations[id].WebsiteURL,
+					new LocalDateTime(organizations[id].CreatedDate),
+					new LocalDateTime(organizations[id].LastUpdatedDate)
+				) +
+				"}) RETURN ID(n) AS id";
+			return result;
+		}
+
+	}
 }

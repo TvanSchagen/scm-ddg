@@ -43,6 +43,7 @@ namespace DummyDataGenerator.Utils
 
 	public class Location
 	{
+		public Guid GUID { get; set; }
 		public string Country { get; set; }
 		public string PostalCode { get; set; }
 		public string Province { get; set; }
@@ -50,21 +51,41 @@ namespace DummyDataGenerator.Utils
 		public string District { get; set; }
 		public string Street { get; set; }
 		public string GPSCoordinates { get; set; }
+		public DateTime CreatedDate { get; set; }
+		public DateTime LastUpdatedDate { get; set; }
 	}
 
 	public class Certificate
 	{
-		// ????
+		public Guid GUID { get; set; }
+		public string Name { get; set; }
+		public string Scope { get; set; }
+		public string Description { get; set; }
+		public DateTime ValidUntilDate { get; set; }
+		public DateTime IssueDate { get; set; }
+		public DateTime CreatedDate { get; set; }
+		public DateTime LastUpdatedDate { get; set; }
 	}
 
 	public class Ingredient
 	{
-		// ????
+		public string Name { get; set; }
+		public DateTime CreatedDate { get; set; }
+		public DateTime LastUpdatedDate { get; set; }
 	}
 
 	public class RawMaterial
 	{
-		// ????
+		public string Name { get; set; }
+		public DateTime CreatedDate { get; set; }
+		public DateTime LastUpdatedDate { get; set; }
+	}
+
+	public class Packaging
+	{
+		public string Name { get; set; }
+		public DateTime CreatedDate { get; set; }
+		public DateTime LastUpdatedDate { get; set; }
 	}
 
 	class FakeDataHelper

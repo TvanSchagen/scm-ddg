@@ -2,6 +2,7 @@
 using System.IO;
 using System.Text;
 using DotNetEnv;
+using DummyDataGenerator.Evaluators;
 using DummyDataGenerator.Generators;
 
 namespace DummyDataGenerator
@@ -22,13 +23,13 @@ namespace DummyDataGenerator
 			string envPath = @"../../../../.env";
 			if (File.Exists(envPath))
 			{
-				Console.WriteLine("Found .env file");
+				Console.WriteLine("Loaded existing .env file with connection properties");
 				// load environment file with connection properties
 				Env.Load(envPath);
 			}
 			else
 			{
-				Console.WriteLine("Did not find .env file, creating one..");
+				Console.WriteLine("Did not find an .env file, creating one..");
 				// create an .env file if it doesn't exist
 				using (FileStream fs = File.Create(envPath))
 				{
@@ -39,19 +40,62 @@ namespace DummyDataGenerator
 				}
 				System.Environment.Exit(0);
 			}
+			ChooseMode(Console.ReadKey().Key);
+		}
 
-			// get user input for data generation parameters
-			Console.WriteLine("Enter parameters (leave blank for default):");
-			Configuration conf = new Configuration(
-				ReadInt("chain depth: ", DEFAULT_CHAIN_DEPTH),
-				ReadInt("chain breadth: ", DEFAULT_CHAIN_BREADTH),
-				ReadInt("activities: ", DEFAULT_NO_OF_ACTIVITIES),
-				ReadInt("suppliers: ", DEFAULT_NO_OF_SUPPLIERS),
-				ReadInt("top level suppliers: ", DEFAULT_NO_OF_TOPLEVELSUPPLIERS),
-				ReadInt("products per top level supplier: ", DEFAULT_NO_OF_PRODUCTS)
-			);
-			Console.WriteLine("Choose your database to import the data into: \n\tN:\tNeo4j\n\tA:\tMySQL (adjecency list)\n\tC:\tMySQL (closure table)");
-			ChooseDatabase(conf, Console.ReadKey().Key);
+		private static void ChooseMode(ConsoleKey input)
+		{
+
+			Console.WriteLine("Choose mode: E for evaluation, G for generation");
+			if (input == ConsoleKey.E)
+			{
+				Console.WriteLine("\nChoose your database to evaluate: \n\tN:\tNeo4j\n\tA:\tMySQL (adjecency list)\n\tC:\tMySQL (closure table)\n");
+				ChooseEvaluator(Console.ReadKey().Key);
+			}
+			else if (input == ConsoleKey.G)
+			{
+
+				// get user input for data generation parameters
+				Console.WriteLine("Enter parameters (leave blank for default):");
+				Configuration conf = new Configuration(
+					ReadInt("chain depth: ", DEFAULT_CHAIN_DEPTH),
+					ReadInt("chain breadth: ", DEFAULT_CHAIN_BREADTH),
+					ReadInt("activities: ", DEFAULT_NO_OF_ACTIVITIES),
+					ReadInt("suppliers: ", DEFAULT_NO_OF_SUPPLIERS),
+					ReadInt("top level suppliers: ", DEFAULT_NO_OF_TOPLEVELSUPPLIERS),
+					ReadInt("products per top level supplier: ", DEFAULT_NO_OF_PRODUCTS)
+				);
+				Console.WriteLine("Choose your database to import the data into: \n\tN:\tNeo4j\n\tA:\tMySQL (adjecency list)\n\tC:\tMySQL (closure table)\n");
+				ChooseGenerator(conf, Console.ReadKey().Key);
+			} else
+			{
+				ChooseMode(Console.ReadKey().Key);
+			}
+		}
+
+		private static void ChooseEvaluator(ConsoleKey input)
+		{
+			if (input == ConsoleKey.A)
+			{
+				MySqlEvaluator e = new MySqlEvaluator();
+				e.Execute();
+			}
+			else if (input == ConsoleKey.N)
+			{
+				Neo4jEvaluator e = new Neo4jEvaluator();
+				e.Execute();
+			}
+			else if (input == ConsoleKey.C)
+			{
+				MySqlClosureTableEvaluator e = new MySqlClosureTableEvaluator();
+				e.Execute();
+			}
+			else
+			{
+				Console.WriteLine("Unsupported input, choose another: ");
+				ChooseEvaluator(Console.ReadKey().Key);
+				return;
+			}
 		}
 
 		/// <summary>
@@ -59,7 +103,7 @@ namespace DummyDataGenerator
 		/// </summary>
 		/// <param name="conf">The associated configuration for the data generation</param>
 		/// <param name="input">The key-input with which the user chooses their database</param>
-		private static void ChooseDatabase(Configuration conf, ConsoleKey input)
+		private static void ChooseGenerator(Configuration conf, ConsoleKey input)
 		{
 			Database database;
 			if (input == ConsoleKey.A)
@@ -77,7 +121,7 @@ namespace DummyDataGenerator
 			else
 			{
 				Console.WriteLine("Unsupported input, choose another: ");
-				ChooseDatabase(conf, Console.ReadKey().Key);
+				ChooseGenerator(conf, Console.ReadKey().Key);
 				return;
 			}
 			Console.WriteLine("\nInitializing connection");

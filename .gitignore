@@ -341,3 +341,4 @@ ASALocalRun/
 
 # BeatPulse healthcheck temp database
 healthchecksdb
+/scm_gr_breadthx_depthx .csv

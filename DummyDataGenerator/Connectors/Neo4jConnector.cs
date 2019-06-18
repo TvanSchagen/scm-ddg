@@ -29,12 +29,12 @@ namespace DummyDataGenerator.Connectors
 		{
 			try
 			{
-				driver = GraphDatabase.Driver(Env.GetString("NEO4J_HOST"), 
+				driver = GraphDatabase.Driver("bolt://" + Env.GetString("NEO4J_HOST"), 
 					AuthTokens.Basic(
 						Env.GetString("NEO4J_USER"), 
 						Env.GetString("NEO4J_PW"))
 					);
-				Console.WriteLine("Opened Neo4j connection");
+				Console.WriteLine("\nOpened Neo4j connection");
 			}
 			catch (Neo4jException e)
 			{
