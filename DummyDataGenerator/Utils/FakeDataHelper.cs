@@ -48,27 +48,16 @@ namespace DummyDataGenerator.Utils
 		public string PostalCode { get; set; }
 		public string Province { get; set; }
 		public string City { get; set; }
-		public string District { get; set; }
 		public string Street { get; set; }
-		public string GPSCoordinates { get; set; }
-		public DateTime CreatedDate { get; set; }
-		public DateTime LastUpdatedDate { get; set; }
-	}
-
-	public class Certificate
-	{
-		public Guid GUID { get; set; }
-		public string Name { get; set; }
-		public string Scope { get; set; }
-		public string Description { get; set; }
-		public DateTime ValidUntilDate { get; set; }
-		public DateTime IssueDate { get; set; }
+		public double Latitude { get; set; }
+		public double Longtitude { get; set; }
 		public DateTime CreatedDate { get; set; }
 		public DateTime LastUpdatedDate { get; set; }
 	}
 
 	public class Ingredient
 	{
+		public Guid GUID { get; set; }
 		public string Name { get; set; }
 		public DateTime CreatedDate { get; set; }
 		public DateTime LastUpdatedDate { get; set; }
@@ -76,6 +65,7 @@ namespace DummyDataGenerator.Utils
 
 	public class RawMaterial
 	{
+		public Guid GUID { get; set; }
 		public string Name { get; set; }
 		public DateTime CreatedDate { get; set; }
 		public DateTime LastUpdatedDate { get; set; }
@@ -83,6 +73,7 @@ namespace DummyDataGenerator.Utils
 
 	public class Packaging
 	{
+		public Guid GUID { get; set; }
 		public string Name { get; set; }
 		public DateTime CreatedDate { get; set; }
 		public DateTime LastUpdatedDate { get; set; }
@@ -100,7 +91,7 @@ namespace DummyDataGenerator.Utils
 				.CustomInstantiator(o => new Organization())
 				.Rules((o, a) =>
 				{
-					a.GUID = Guid.NewGuid();
+					a.GUID = o.Random.Guid();
 					a.Name = o.Company.CompanyName();
 					a.Description = o.PickRandom(new string[] { o.Lorem.Paragraph(), null });
 					a.EmployerIdentificationNumber = o.Company.Ein();
@@ -123,7 +114,7 @@ namespace DummyDataGenerator.Utils
 				.CustomInstantiator(o => new Product())
 				.Rules((o, a) =>
 				{
-					a.GUID = Guid.NewGuid();
+					a.GUID = o.Random.Guid();
 					a.Name = o.Commerce.ProductName();
 					a.EANCode = o.Commerce.Ean13();
 					a.Category = o.Commerce.Categories(1)[0];
@@ -145,7 +136,7 @@ namespace DummyDataGenerator.Utils
 				.CustomInstantiator(o => new Activity())
 				.Rules((o, a) =>
 				{
-					a.GUID = Guid.NewGuid();
+					a.GUID = o.Random.Guid();
 					a.Name = o.Hacker.IngVerb();
 					a.Description = o.PickRandom(new string[] { o.Lorem.Paragraph(), null });
 					a.CreatedDate = o.Date.Past(5);
@@ -155,5 +146,31 @@ namespace DummyDataGenerator.Utils
 			var activities = activity.Generate(number);
 			return activities;
 		}
+
+		public static List<Location> GenerateLocations(int number)
+		{
+			Randomizer.Seed = new Random(SEED);
+			var location = new Faker<Location>()
+				.StrictMode(false)
+				.CustomInstantiator(o => new Location())
+				.Rules((o, a) =>
+				{
+					a.GUID = o.Random.Guid();
+					a.Country = o.Address.Country();
+					a.PostalCode = o.Address.ZipCode();
+					a.Province = o.Address.County();
+					a.City = o.Address.City();
+					a.Street = o.Address.StreetAddress();
+					a.Longtitude = o.Address.Longitude();
+					a.Latitude = o.Address.Latitude();
+					a.CreatedDate = o.Date.Past(5);
+					a.LastUpdatedDate = o.Date.Recent(90);
+
+				});
+
+			var locations = location.Generate(number);
+			return locations;
+		}
+
 	}
 }

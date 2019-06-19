@@ -40,13 +40,13 @@ namespace DummyDataGenerator
 				}
 				System.Environment.Exit(0);
 			}
+			Console.WriteLine("Choose mode: E for evaluation, G for generation");
 			ChooseMode(Console.ReadKey().Key);
 		}
 
 		private static void ChooseMode(ConsoleKey input)
 		{
 
-			Console.WriteLine("Choose mode: E for evaluation, G for generation");
 			if (input == ConsoleKey.E)
 			{
 				Console.WriteLine("\nChoose your database to evaluate: \n\tN:\tNeo4j\n\tA:\tMySQL (adjecency list)\n\tC:\tMySQL (closure table)\n");
@@ -56,7 +56,7 @@ namespace DummyDataGenerator
 			{
 
 				// get user input for data generation parameters
-				Console.WriteLine("Enter parameters (leave blank for default):");
+				Console.WriteLine("\nEnter parameters (leave blank for default):");
 				Configuration conf = new Configuration(
 					ReadInt("chain depth: ", DEFAULT_CHAIN_DEPTH),
 					ReadInt("chain breadth: ", DEFAULT_CHAIN_BREADTH),
@@ -127,7 +127,7 @@ namespace DummyDataGenerator
 			Console.WriteLine("\nInitializing connection");
 			database.InitializeConnection();
 			Console.WriteLine("Attempting to generate data");
-			database.GenerateFakeData(conf);
+			database.GenerateFakeData(10000);
 			database.GenerateData(conf);
 			Console.WriteLine("Closing connection");
 			database.CloseConnection();

@@ -38,10 +38,11 @@ namespace DummyDataGenerator
 			int[] tlOrgs = GenerateTopLevelOrganizations(config.NumberOfTopLevelSuppliers);
 			GenerateOrganizations(config.NumberOfSuppliers);
 			GenerateActivities(config.NumberOfActivities);
+			GenerateLocations(config.NumberOfSuppliers);
 			GenerateProductTrees(tlOrgs, config.NumberOfProducts, config.ChainDepth, config.ChainBreadth);
 			AddOrganizationsAndActivitiesToProductTree(config.NumberOfSuppliers, config.NumberOfTopLevelSuppliers, config.NumberOfActivities, config.NumberOfProducts, config.ChainDepth, config.ChainBreadth);
 			AddMetaData(config);
-			Console.WriteLine("Program done, press enter to continue");
+			Console.WriteLine("Program completed.");
 		}
 
 		/// <summary>
@@ -84,7 +85,7 @@ namespace DummyDataGenerator
 			var watch = System.Diagnostics.Stopwatch.StartNew();
 			for (int i = 0; i < organizations; i++)
 			{
-				MySqlCommand com = InsertOrganization(true, i, connector.Connection);
+				MySqlCommand com = InsertOrganization(true, i);
 				
 				try
 				{
@@ -112,7 +113,7 @@ namespace DummyDataGenerator
 			var watch = System.Diagnostics.Stopwatch.StartNew();
 			for (int i = 0; i < organizations; i++)
 			{
-				MySqlCommand com = InsertOrganization(false, i, connector.Connection);
+				MySqlCommand com = InsertOrganization(false, i);
 				com.ExecuteNonQuery();
 				result.Add((int)com.LastInsertedId);
 			}
@@ -132,12 +133,32 @@ namespace DummyDataGenerator
 			var watch = System.Diagnostics.Stopwatch.StartNew();
 			for (int i = 0; i < activites; i++)
 			{
-				MySqlCommand com = InsertActivity(i, connector.Connection);
+				MySqlCommand com = InsertActivity(i);
 				com.ExecuteNonQuery();
 				result.Add((int)com.LastInsertedId);
 			}
 			watch.Stop();
 			Console.WriteLine("Took " + watch.ElapsedMilliseconds + "ms " + "(" + (watch.ElapsedMilliseconds / 1000) + "s) " + " to generate " + result.Count + " activities");
+			return result.ToArray();
+		}
+
+		/// <summary>
+		/// 
+		/// </summary>
+		/// <param name="locations"></param>
+		/// <returns></returns>
+		protected int[] GenerateLocations(int locations)
+		{
+			List<int> result = new List<int>();
+			var watch = System.Diagnostics.Stopwatch.StartNew();
+			for (int i = 0; i < locations; i++)
+			{
+				MySqlCommand com = InsertLocation(i);
+				com.ExecuteNonQuery();
+				result.Add((int) com.LastInsertedId);
+			}
+			watch.Stop();
+			Console.WriteLine("Took " + watch.ElapsedMilliseconds + "ms " + "(" + (watch.ElapsedMilliseconds / 1000) + "s) " + " to generate " + result.Count + " locations");
 			return result.ToArray();
 		}
 
@@ -163,7 +184,7 @@ namespace DummyDataGenerator
 
 					// generate the top level product
 					//string statement = "INSERT INTO product(name) VALUES(" + "'Top Level Product #o" + (i + 1) + "-p" + (j + 1) + "');";
-					MySqlCommand com = InsertProduct(true, i * productsPerSupplier + j, connector.Connection);
+					MySqlCommand com = InsertProduct(true, i * productsPerSupplier + j);
 					com.ExecuteNonQuery();
 					int topLevelId = (int) com.LastInsertedId;
 
@@ -215,7 +236,7 @@ namespace DummyDataGenerator
 				{
 					// first insert the product
 					//string statement = "INSERT INTO product(name) VALUES(" + "'Product #c" + (chainId + 1) + "-d" + depth + "-p" + (i + 1) + "-b" + (j + 1) + "');";
-					MySqlCommand com = InsertProduct(false, item * 2 + j, connector.Connection);
+					MySqlCommand com = InsertProduct(false, item * 2 + j);
 					com.ExecuteNonQuery();
 					int childProductId = (int) com.LastInsertedId;
 					childProductsCreated.Add(childProductId);
@@ -256,19 +277,26 @@ namespace DummyDataGenerator
 
 			for (int i = 0; i < count; i++)
 			{
-				string statement2 = string.Format("INSERT INTO supplies(organization_id, activity_id, product_id) VALUES({0}, {1}, {2});",
+				string statement2 = string.Format("INSERT INTO supplies(organization_id, activity_id, product_id, location_id) VALUES({0}, {1}, {2}, {3});",
 					// add an offset of the toplevel suppliers, which are added first to the database, then modulo if the n.o. products outnumbers the n.o. organizations
 					(i % numberOfOrganizations) + numberOfTopLevelOrganizations + 1, // numberOfOrganizations + 1 + numberOfTopLevelOrganizations,
 					// modulo if the n.o.products outnumbers the n.o. activities
 					i % numberOfActivities + 1,
 					// use the iterator as the product id
-					i + 1);
+					i + 1,
+					// use the number of organizations for the location as well
+					(i % numberOfOrganizations) + 1);
 				MySqlCommand com2 = new MySqlCommand(statement2, connector.Connection);
 				com2.ExecuteNonQuery();
 			}
 
 			watch.Stop();
 			Console.WriteLine("Took " + watch.ElapsedMilliseconds + "ms " + "(" + (watch.ElapsedMilliseconds / 1000) + "s) to add organizations and activities to the product tree");
+		}
+
+		protected void AddLocations()
+		{
+
 		}
 
 		/// <summary>
@@ -306,13 +334,13 @@ namespace DummyDataGenerator
 			com3.ExecuteNonQuery();
 		}
 
-		public MySqlCommand InsertProduct(bool isTopLevel, int id, MySqlConnection conn)
+		public MySqlCommand InsertProduct(bool isTopLevel, int id)
 		{
 			// this prevents the id from ever going out of range of the list
 			id = id % products.Count;
 			MySqlCommand com = new MySqlCommand();
 			com.CommandText = "INSERT INTO product(`GUID`, `name`, `description`, `ean`, `category`, `sub_category`, `created`, `last_updated`) VALUES(@GUID, @name, @description, @ean, @category, @sub_category, @created, @last_updated);";
-			com.Connection = conn;
+			com.Connection = connector.Connection;
 			com.Prepare();
 			com.Parameters.AddWithValue("@GUID", products[id].GUID);
 			com.Parameters.AddWithValue("@name", isTopLevel ? "Top Level Product " + products[id].Name : products[id].Name);
@@ -325,13 +353,13 @@ namespace DummyDataGenerator
 			return com;
 		}
 
-		public MySqlCommand InsertActivity(int id, MySqlConnection conn)
+		public MySqlCommand InsertActivity(int id)
 		{
 			// this prevents the id from ever going out of range of the list
 			id = id % activities.Count;
 			MySqlCommand com = new MySqlCommand();
 			com.CommandText = "INSERT INTO activity(`GUID`, `name`, `description`, `created`, `last_updated`) VALUES(@GUID, @name, @description, @created, @last_updated);";
-			com.Connection = conn;
+			com.Connection = connector.Connection;
 			com.Prepare();
 			com.Parameters.AddWithValue("@GUID", activities[id].GUID);
 			com.Parameters.AddWithValue("@name", activities[id].Name);
@@ -341,13 +369,13 @@ namespace DummyDataGenerator
 			return com;
 		}
 
-		public MySqlCommand InsertOrganization(bool isTopLevel, int id, MySqlConnection conn)
+		public MySqlCommand InsertOrganization(bool isTopLevel, int id)
 		{
 			// this prevents the id from ever going out of range of the list
 			id = id % organizations.Count;
 			MySqlCommand com = new MySqlCommand();
 			com.CommandText = "INSERT INTO organization(`GUID`, `name`, `description`, `ein`, `number_of_employees`, `email_address`, `website`, `created`, `last_updated`) VALUES(@GUID, @name, @description, @ein, @number_of_employees, @email_address, @website, @created, @last_updated);";
-			com.Connection = conn;
+			com.Connection = connector.Connection;
 			com.Prepare();
 			com.Parameters.AddWithValue("@GUID", organizations[id].GUID);
 			com.Parameters.AddWithValue("@name", isTopLevel ? "Top Level Organization " + organizations[id].Name : organizations[id].Name);
@@ -358,6 +386,27 @@ namespace DummyDataGenerator
 			com.Parameters.AddWithValue("@website", organizations[id].WebsiteURL);
 			com.Parameters.AddWithValue("@created", organizations[id].CreatedDate);
 			com.Parameters.AddWithValue("@last_updated", organizations[id].LastUpdatedDate);
+			return com;
+		}
+
+		public MySqlCommand InsertLocation(int id)
+		{
+			id = id % locations.Count;
+			MySqlCommand com = new MySqlCommand();
+			com.CommandText = "INSERT INTO location(`GUID`, `longtitude`, `latitude`, `country`, `postal_code`, `province`, `city`, `street`, `created`, `last_updated`) VALUES(@GUID, @longtitude, @latitude, @country, @postal_code, @province, @city, @street, @created, @last_updated);";
+			com.Connection = connector.Connection;
+			com.Prepare();
+			com.Parameters.AddWithValue("@GUID", locations[id].GUID);
+			com.Parameters.AddWithValue("@longtitude", locations[id].Longtitude);
+			com.Parameters.AddWithValue("@latitude", locations[id].Latitude);
+			com.Parameters.AddWithValue("@country", locations[id].Country);
+			com.Parameters.AddWithValue("@postal_code", locations[id].PostalCode);
+			com.Parameters.AddWithValue("@province", locations[id].Province);
+			com.Parameters.AddWithValue("@city", locations[id].City);
+			com.Parameters.AddWithValue("@street", locations[id].Street);
+			com.Parameters.AddWithValue("@created", locations[id].CreatedDate);
+			com.Parameters.AddWithValue("@last_updated", locations[id].LastUpdatedDate);
+			Console.WriteLine(com.CommandText);
 			return com;
 		}
 

@@ -55,6 +55,29 @@ CREATE TABLE `consists_of` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Table structure for table `location`
+--
+
+DROP TABLE IF EXISTS `location`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+ SET character_set_client = utf8mb4 ;
+CREATE TABLE `location` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `GUID` char(36) NULL,
+  `longtitude` float(11, 8) NULL,
+  `latitude` float(10, 8),
+  `country` varchar(64) NULL,
+  `postal_code` varchar(64) NULL,
+  `province` varchar(64) NULL,
+  `city` varchar(64) NULL,
+  `street` varchar(128) NULL,
+  `created` DATETIME NULL,
+  `last_updated` DATETIME NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=0 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
 -- Table structure for table `organization`
 --
 
@@ -143,13 +166,16 @@ CREATE TABLE `supplies` (
   `organization_id` int(11) NOT NULL,
   `activity_id` int(11) NOT NULL,
   `product_id` int(11) NOT NULL,
+  `location_id` int(11) NOT NULL,
   PRIMARY KEY (`id`),
   KEY `fk_product_id_idx` (`product_id`),
   KEY `fk_activity_id_idx` (`activity_id`),
   KEY `fk_organization_id_idx` (`organization_id`),
+  KEY `fk_location_id_idx` (`location_id`),
   CONSTRAINT `fk_activity_id` FOREIGN KEY (`activity_id`) REFERENCES `activity` (`id`),
   CONSTRAINT `fk_organization_id` FOREIGN KEY (`organization_id`) REFERENCES `organization` (`id`),
-  CONSTRAINT `fk_product_id` FOREIGN KEY (`product_id`) REFERENCES `product` (`id`)
+  CONSTRAINT `fk_product_id` FOREIGN KEY (`product_id`) REFERENCES `product` (`id`),
+  CONSTRAINT `fk_location_id` FOREIGN KEY (`location_id`) REFERENCES `location` (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=0 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 

@@ -49,7 +49,7 @@ namespace DummyDataGenerator.Generators
 
 					// generate the top level product
 					// string statement = "INSERT INTO product(name) VALUES(" + "'Top Level Product #o" + (i + 1) + "-p" + (j + 1) + "');";
-					MySqlCommand com = InsertProduct(true, i * productsPerSupplier + j, connector.Connection);
+					MySqlCommand com = InsertProduct(true, i * productsPerSupplier + j);
 					com.ExecuteNonQuery();
 					int topLevelId = (int)com.LastInsertedId;
 
@@ -113,7 +113,7 @@ namespace DummyDataGenerator.Generators
 				{
 					// first insert the product
 					// string statement = "INSERT INTO product(name) VALUES(" + "'Product #c" + (chainId + 1) + "-d" + depth + "-p" + (i + 1) + "-b" + (j + 1) + "');";
-					MySqlCommand com = InsertProduct(false, item * 2 + j, connector.Connection);
+					MySqlCommand com = InsertProduct(false, item * 2 + j);
 					com.ExecuteNonQuery();
 					// get the id back from the database
 					int childProductId = (int)com.LastInsertedId;

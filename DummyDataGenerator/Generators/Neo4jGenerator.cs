@@ -24,14 +24,14 @@ namespace DummyDataGenerator
         public override void GenerateData(Configuration config)
         {
 			RefreshSchema();
-			int[] tlOrgs = GenerateTopLevelOrganizations(config.NumberOfTopLevelSuppliers);
-			int[] orgs = GenerateOrganizations(config.NumberOfSuppliers);
-			// int[] acts = GenerateActivities(config.NumberOfActivities);
-			GenerateProductTrees(tlOrgs, config.NumberOfProducts, config.ChainDepth, config.ChainBreadth);
-			AddOrganizationsAndActivitiesToProductTree(config.NumberOfActivities, orgs);
+			int[] topLevelOrganizations = GenerateTopLevelOrganizations(config.NumberOfTopLevelSuppliers);
+			int[] organizations = GenerateOrganizations(config.NumberOfSuppliers);
+			int[] locations = GenerateLocations(config.NumberOfSuppliers);
+			GenerateProductTrees(topLevelOrganizations, config.NumberOfProducts, config.ChainDepth, config.ChainBreadth);
+			AddOrganizationsAndActivitiesToProductTree(organizations, locations);
 			// AddConstraints();
 			AddMetaData(config);
-			Console.WriteLine("Done..");
+			Console.WriteLine("Program completed.");
 		}
 
 		/// <summary>
@@ -99,20 +99,15 @@ namespace DummyDataGenerator
 			return result.ToArray();
 		}
 
-		/// <summary>
-		/// 
-		/// </summary>
-		/// <param name="activities"></param>
-		/// <returns></returns>
-		/*private int[] GenerateActivities(int activities)
+		private int[] GenerateLocations(int locations)
 		{
 			List<int> result = new List<int>();
 			var watch = System.Diagnostics.Stopwatch.StartNew();
 			using (ISession session = connector.Connection.Session())
 			{
-				for (int i = 0; i < activities; i++)
+				for (int i = 0; i < locations; i++)
 				{
-					string statement = "CREATE (n:Activity { name: 'Activity #" + i + "' }) RETURN ID(n) AS id";
+					string statement = InsertLocation(i);
 					IStatementResult res = session.Run(statement);
 					IRecord record = res.Peek();
 					int id = record["id"].As<int>();
@@ -120,9 +115,9 @@ namespace DummyDataGenerator
 				}
 			}
 			watch.Stop();
-			Console.WriteLine("Added activities organizations in " + watch.ElapsedMilliseconds + "ms" + "(" + (watch.ElapsedMilliseconds / 1000) + "s)");
+			Console.WriteLine("Added locations in " + watch.ElapsedMilliseconds + "ms" + "(" + (watch.ElapsedMilliseconds / 1000) + "s)");
 			return result.ToArray();
-		}*/
+		}
 
 		/// <summary>
 		/// 
@@ -228,15 +223,15 @@ namespace DummyDataGenerator
 		/// <summary>
 		/// 
 		/// </summary>
-		/// <param name="activityIds"></param>
 		/// <param name="organizationIds"></param>
-		private void AddOrganizationsAndActivitiesToProductTree(int numberOfActivities, int[] organizationIds)
+		/// <param name="locationIds"></param>
+		private void AddOrganizationsAndActivitiesToProductTree(int[] organizationIds, int[] locationIds)
 		{
 			var watch = System.Diagnostics.Stopwatch.StartNew();
 			List<int> productIds = new List<int>();
 			using (ISession session = connector.Connection.Session())
 			{
-				string statement =	"MATCH (n:Product)" +
+				string statement = "MATCH (n:Product)" +
 									" RETURN ID(n) AS id";
 				IStatementResult res = session.WriteTransaction(tx => tx.Run(statement));
 				foreach (IRecord r in res)
@@ -252,12 +247,15 @@ namespace DummyDataGenerator
 				using (ISession session = connector.Connection.Session())
 				{
 					int productId = productIdsArray[i];
-					//int activityId = activityIds[i % activityIds.Length];
 					int organizationId = organizationIds[i % organizationIds.Length];
-					string statement = "MATCH (p:Product), (o:Organization)" +
+					int locationId = locationIds[i % locationIds.Length];
+					string statement = "MATCH (p:Product), (o:Organization), (l:Location)" +
 										" WHERE ID(p) = " + productId +
 										" AND ID(o) = " + organizationId +
-										" CREATE (o)-[:ACTIVITY_" + (i % numberOfActivities) + InsertActivity(i) + "]->(p)";
+										" AND ID(l) = " + locationId +
+										" CREATE (o)-[:PERFORMS]->(a:Activity " + InsertActivity(i) + ")," +
+										" (a)-[:PRODUCES]->(p)," +
+										" (a)-[:LOCATED_AT]->(l)";
 					//" CREATE (o)-[:CARRIES_OUT]->(a:Activity { name:'Activity # " + i + "' })-[:PRODUCES]->(p)";
 					session.WriteTransaction(tx => tx.Run(statement));
 				}
@@ -324,7 +322,7 @@ namespace DummyDataGenerator
 		public string InsertActivity(int id)
 		{
 			id = id % activities.Count;
-			string result = " { " +
+			string result = "{ " +
 				string.Format("GUID: \"{0}\", name: \"{1}\", description: \"{2}\", created: datetime('{3}'), last_updated: datetime('{4}')",
 					activities[id].GUID,
 					activities[id].Name,
@@ -350,6 +348,26 @@ namespace DummyDataGenerator
 					organizations[id].WebsiteURL,
 					new LocalDateTime(organizations[id].CreatedDate),
 					new LocalDateTime(organizations[id].LastUpdatedDate)
+				) +
+				"}) RETURN ID(n) AS id";
+			return result;
+		}
+
+		public string InsertLocation(int id)
+		{
+			id = id % locations.Count;
+			string result = "CREATE (n:Location { " +
+				string.Format("GUID: \"{0}\", latitude: {1}, longtitude: {2}, country: \"{3}\", postal_code: \"{4}\", province: \"{5}\", city: \"{6}\", street: \"{7}\", created: datetime('{8}'), last_updated: datetime('{9}')",
+					locations[id].GUID,
+					locations[id].Latitude.ToString(System.Globalization.CultureInfo.InvariantCulture),
+					locations[id].Longtitude.ToString(System.Globalization.CultureInfo.InvariantCulture),
+					locations[id].Country,
+					locations[id].PostalCode,
+					locations[id].Province,
+					locations[id].City,
+					locations[id].Street,
+					new LocalDateTime(locations[id].CreatedDate),
+					new LocalDateTime(locations[id].LastUpdatedDate)
 				) +
 				"}) RETURN ID(n) AS id";
 			return result;

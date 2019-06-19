@@ -11,7 +11,7 @@ namespace DummyDataGenerator
 		protected List<Organization> organizations;
 		protected List<Product> products;
 		protected List<Activity> activities;
-
+		protected List<Location> locations;
         public abstract void InitializeConnection();
 
         public abstract void GenerateData(Configuration config);
@@ -22,13 +22,13 @@ namespace DummyDataGenerator
 		/// Fills the organizations, products and activity objects with data for the specified configuration
 		/// </summary>
 		/// <param name="conf"></param>
-		public void GenerateFakeData(Configuration conf)
+		public void GenerateFakeData(int numberOfFakeEntities)
 		{
 			var watch = System.Diagnostics.Stopwatch.StartNew();
-			organizations = FakeDataHelper.GenerateOrganizations(conf.NumberOfSuppliers);
-			int numberOfProducts = conf.NumberOfTopLevelSuppliers * conf.NumberOfProducts * (conf.ChainBreadth ^ conf.ChainDepth - 1);
-			products = FakeDataHelper.GenerateProducts(numberOfProducts);
-			activities = FakeDataHelper.GenerateActivities(conf.NumberOfActivities);
+			organizations = FakeDataHelper.GenerateOrganizations(numberOfFakeEntities);
+			products = FakeDataHelper.GenerateProducts(numberOfFakeEntities);
+			activities = FakeDataHelper.GenerateActivities(numberOfFakeEntities);
+			locations = FakeDataHelper.GenerateLocations(numberOfFakeEntities);
 			watch.Stop();
 			Console.WriteLine("Took " + watch.ElapsedMilliseconds + "ms to generate " + products.Count + " products of" + " fake data to insert into database");
 		}

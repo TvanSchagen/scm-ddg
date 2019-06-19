@@ -29,7 +29,7 @@ namespace DummyDataGenerator.Connectors
 		{
 			try
 			{
-				driver = GraphDatabase.Driver("bolt://" + Env.GetString("NEO4J_HOST"), 
+				driver = GraphDatabase.Driver(Env.GetString("NEO4J_HOST"), 
 					AuthTokens.Basic(
 						Env.GetString("NEO4J_USER"), 
 						Env.GetString("NEO4J_PW"))
