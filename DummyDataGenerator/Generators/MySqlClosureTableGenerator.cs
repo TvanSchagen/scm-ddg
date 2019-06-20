@@ -18,6 +18,7 @@ namespace DummyDataGenerator.Generators
 			int[] tlOrgs = GenerateTopLevelOrganizations(config.NumberOfTopLevelSuppliers);
 			GenerateOrganizations(config.NumberOfSuppliers);
 			GenerateActivities(config.NumberOfActivities);
+			GenerateLocations(config.NumberOfSuppliers);
 			if (allowMultipleThreads)
 			{
 				Console.WriteLine("Not supported yet.");
