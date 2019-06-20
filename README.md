@@ -13,6 +13,12 @@ Execute using Visual Studio 2017 or higher.
 - MySQL Connector/NET 8.0.16 for MySQL 8.0.x
 - Neo4j .NET driver 1.7 for Neo4j 3.5.x
 
+## Features
+- Generation of supply chain structures based on configurable parameters
+- Consistent data generation using Bogus fake data library
+- Partial multi-threading for generation of data
+- Evaluating generated datasets with the included evaluators
+
 ### Current Database Support
 Database | Type | Support
 --- | --- | ---
