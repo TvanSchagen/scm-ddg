@@ -1,8 +1,5 @@
-﻿using DummyDataGenerator.Connectors;
-using MySql.Data.MySqlClient;
+﻿using MySql.Data.MySqlClient;
 using System;
-using System.IO;
-using System.Text;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -15,16 +12,33 @@ namespace DummyDataGenerator.Generators
 		/// Generates the data with the specified parameters of the configuration
 		/// </summary>
 		/// <param name="config">The configuration that holds the paremeters for the data</param>
-		public override void GenerateData(Configuration config)
+		public override void GenerateData(Configuration config, bool allowMultipleThreads)
 		{
 			RefreshDatabaseSchema();
 			int[] tlOrgs = GenerateTopLevelOrganizations(config.NumberOfTopLevelSuppliers);
 			GenerateOrganizations(config.NumberOfSuppliers);
 			GenerateActivities(config.NumberOfActivities);
-			GenerateProductTrees(tlOrgs, config.NumberOfProducts, config.ChainDepth, config.ChainBreadth);
+			if (allowMultipleThreads)
+			{
+				Console.WriteLine("Not supported yet.");
+			}
+			else
+			{
+				GenerateProductTrees(tlOrgs, config.NumberOfProducts, config.ChainDepth, config.ChainBreadth);
+			}
 			AddOrganizationsAndActivitiesToProductTree(config.NumberOfSuppliers, config.NumberOfTopLevelSuppliers, config.NumberOfActivities, config.NumberOfProducts, config.ChainDepth, config.ChainBreadth);
 			AddMetaData(config);
 			Console.WriteLine("Program done, press enter to continue");
+		}
+
+		private void mt_GenerateProductTrees()
+		{
+
+		}
+
+		private void mt_GenerateSingleProductTree()
+		{
+
 		}
 
 		/// <summary>

@@ -32,14 +32,21 @@ namespace DummyDataGenerator
 		/// Generates the data with the specified parameters of the configuration
 		/// </summary>
 		/// <param name="config">The configuration that holds the paremeters for the data</param>
-		public override void GenerateData(Configuration config)
+		public override void GenerateData(Configuration config, bool allowMultipleThreads)
 		{
 			RefreshDatabaseSchema();
 			int[] tlOrgs = GenerateTopLevelOrganizations(config.NumberOfTopLevelSuppliers);
 			GenerateOrganizations(config.NumberOfSuppliers);
 			GenerateActivities(config.NumberOfActivities);
 			GenerateLocations(config.NumberOfSuppliers);
-			GenerateProductTrees(tlOrgs, config.NumberOfProducts, config.ChainDepth, config.ChainBreadth);
+			if (allowMultipleThreads)
+			{
+				Console.WriteLine("Not supported yet.");
+			}
+			else
+			{
+				GenerateProductTrees(tlOrgs, config.NumberOfProducts, config.ChainDepth, config.ChainBreadth);
+			}
 			AddOrganizationsAndActivitiesToProductTree(config.NumberOfSuppliers, config.NumberOfTopLevelSuppliers, config.NumberOfActivities, config.NumberOfProducts, config.ChainDepth, config.ChainBreadth);
 			AddMetaData(config);
 			Console.WriteLine("Program completed.");
@@ -143,9 +150,9 @@ namespace DummyDataGenerator
 		}
 
 		/// <summary>
-		/// 
+		/// Generates a set of locations
 		/// </summary>
-		/// <param name="locations"></param>
+		/// <param name="locations">the number of locations</param>
 		/// <returns></returns>
 		protected int[] GenerateLocations(int locations)
 		{
@@ -160,6 +167,16 @@ namespace DummyDataGenerator
 			watch.Stop();
 			Console.WriteLine("Took " + watch.ElapsedMilliseconds + "ms " + "(" + (watch.ElapsedMilliseconds / 1000) + "s) " + " to generate " + result.Count + " locations");
 			return result.ToArray();
+		}
+
+		private void mt_GenerateProductTrees()
+		{
+
+		}
+
+		private void mt_GenerateSingleProductTree()
+		{
+
 		}
 
 		/// <summary>
@@ -222,9 +239,6 @@ namespace DummyDataGenerator
 		/// <param name="parentProductIdentifiers">the list of parent products for which a number of child products has to be generated</param>
 		/// <param name="breadthPerLevel">the number of child products that have to be generated per parent product</param>
 		/// <returns>a list of the id's of the child products that have been created</returns>
-		/// ---
-		/// TO DO: check if we can speed this up using batches
-		/// ---
 		private List<int> GenerateProductRowAndRelations(int chainId, int depth, List<int> parentProductIdentifiers, int breadthPerLevel)
 		{
 			List<int> childProductsCreated = new List<int>();

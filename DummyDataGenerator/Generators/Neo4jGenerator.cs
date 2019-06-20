@@ -30,7 +30,7 @@ namespace DummyDataGenerator
 			int[] locations = GenerateLocations(config.NumberOfSuppliers);
 			if (allowMultipleThreads)
 			{
-				GenerateProductTreesMultiThreaded(topLevelOrganizations, config.NumberOfProducts, config.ChainDepth, config.ChainBreadth);
+				mt_GenerateProductTrees(topLevelOrganizations, config.NumberOfProducts, config.ChainDepth, config.ChainBreadth);
 			}
 			else
 			{
@@ -147,7 +147,7 @@ namespace DummyDataGenerator
 			public int prodIter;
 		}
 
-		private void GenerateProductTreesMultiThreaded(int[] organizationIds, int productsPerSupplier, int depth, int breadthPerLevel)
+		private void mt_GenerateProductTrees(int[] organizationIds, int productsPerSupplier, int depth, int breadthPerLevel)
 		{
 			List<Thread> threads = new List<Thread>();
 			List<ProductTreeData> data = new List<ProductTreeData>();
@@ -156,7 +156,7 @@ namespace DummyDataGenerator
 			{
 				for (int j = 0; j < productsPerSupplier; j++)
 				{
-					threads.Add(new Thread(GenerateProductTree));
+					threads.Add(new Thread(mt_GenerateProductTree));
 					data.Add(new ProductTreeData(organizationIds[i], productsPerSupplier, depth, breadthPerLevel, i, j));
 				}
 			}
@@ -173,7 +173,7 @@ namespace DummyDataGenerator
 
 		}
 
-		private void GenerateProductTree(object data)
+		private void mt_GenerateProductTree(object data)
 		{
 			ProductTreeData d = (ProductTreeData) data;
 			Console.WriteLine("Starting new Thread..");

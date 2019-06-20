@@ -69,8 +69,10 @@ namespace DummyDataGenerator
 					ReadInt("top level suppliers: ", DEFAULT_NO_OF_TOPLEVELSUPPLIERS),
 					ReadInt("products per top level supplier: ", DEFAULT_NO_OF_PRODUCTS)
 				);
-				Console.WriteLine("Choose your database to import the data into: \n\tN:\tNeo4j\n\tA:\tMySQL (adjecency list)\n\tC:\tMySQL (closure table)\n");
-				ChooseGenerator(conf, Console.ReadKey().Key);
+				Console.WriteLine("Allow multiple threads to be used? (Y/N)");
+				ConsoleKey allow = Console.ReadKey().Key;
+				Console.WriteLine("\nChoose your database to import the data into: \n\tN:\tNeo4j\n\tA:\tMySQL (adjecency list)\n\tC:\tMySQL (closure table)\n");
+				ChooseGenerator(conf, allow, Console.ReadKey().Key);
 			} else
 			{
 				ChooseMode(Console.ReadKey().Key);
@@ -111,7 +113,7 @@ namespace DummyDataGenerator
 		/// </summary>
 		/// <param name="conf">The associated configuration for the data generation</param>
 		/// <param name="input">The key-input with which the user chooses their database</param>
-		private static void ChooseGenerator(Configuration conf, ConsoleKey input)
+		private static void ChooseGenerator(Configuration conf, ConsoleKey allowMultipleThreads, ConsoleKey input)
 		{
 			Database database;
 			if (input == ConsoleKey.A)
@@ -129,14 +131,15 @@ namespace DummyDataGenerator
 			else
 			{
 				Console.WriteLine("Unsupported input, choose another: ");
-				ChooseGenerator(conf, Console.ReadKey().Key);
+				ChooseGenerator(conf, allowMultipleThreads, Console.ReadKey().Key);
 				return;
 			}
 			Console.WriteLine("\nInitializing connection");
 			database.InitializeConnection();
 			Console.WriteLine("Attempting to generate data");
 			database.GenerateFakeData(10000);
-			database.GenerateData(conf, false);
+			bool allow = allowMultipleThreads == ConsoleKey.Y;
+			database.GenerateData(conf, allow);
 			Console.WriteLine("Closing connection");
 			database.CloseConnection();
 			Console.ReadLine();
