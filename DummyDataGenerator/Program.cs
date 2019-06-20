@@ -44,17 +44,21 @@ namespace DummyDataGenerator
 			ChooseMode(Console.ReadKey().Key);
 		}
 
+		/// <summary>
+		/// Lets the user choose a mode: evaluation or generation
+		/// </summary>
+		/// <param name="input">The key-input with which the user chooses their mode</param>
 		private static void ChooseMode(ConsoleKey input)
 		{
-
+			// E for evaluator mode
 			if (input == ConsoleKey.E)
 			{
 				Console.WriteLine("\nChoose your database to evaluate: \n\tN:\tNeo4j\n\tA:\tMySQL (adjecency list)\n\tC:\tMySQL (closure table)\n");
 				ChooseEvaluator(Console.ReadKey().Key);
 			}
+			// G for generating mode
 			else if (input == ConsoleKey.G)
 			{
-
 				// get user input for data generation parameters
 				Console.WriteLine("\nEnter parameters (leave blank for default):");
 				Configuration conf = new Configuration(
@@ -73,6 +77,10 @@ namespace DummyDataGenerator
 			}
 		}
 
+		/// <summary>
+		/// Directs the program to the chosen database
+		/// </summary>
+		/// <param name="input">The key-input with which the user chooses their database</param>
 		private static void ChooseEvaluator(ConsoleKey input)
 		{
 			if (input == ConsoleKey.A)
@@ -128,7 +136,7 @@ namespace DummyDataGenerator
 			database.InitializeConnection();
 			Console.WriteLine("Attempting to generate data");
 			database.GenerateFakeData(10000);
-			database.GenerateData(conf);
+			database.GenerateData(conf, false);
 			Console.WriteLine("Closing connection");
 			database.CloseConnection();
 			Console.ReadLine();

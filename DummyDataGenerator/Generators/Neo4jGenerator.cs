@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.Serialization.Json;
+using System.Threading;
 
 namespace DummyDataGenerator
 {
@@ -21,13 +22,20 @@ namespace DummyDataGenerator
 		/// 
 		/// </summary>
 		/// <param name="config"></param>
-        public override void GenerateData(Configuration config)
+        public override void GenerateData(Configuration config, bool allowMultipleThreads)
         {
 			RefreshSchema();
 			int[] topLevelOrganizations = GenerateTopLevelOrganizations(config.NumberOfTopLevelSuppliers);
 			int[] organizations = GenerateOrganizations(config.NumberOfSuppliers);
 			int[] locations = GenerateLocations(config.NumberOfSuppliers);
-			GenerateProductTrees(topLevelOrganizations, config.NumberOfProducts, config.ChainDepth, config.ChainBreadth);
+			if (allowMultipleThreads)
+			{
+				GenerateProductTreesMultiThreaded(topLevelOrganizations, config.NumberOfProducts, config.ChainDepth, config.ChainBreadth);
+			}
+			else
+			{
+				GenerateProductTrees(topLevelOrganizations, config.NumberOfProducts, config.ChainDepth, config.ChainBreadth);
+			}
 			AddOrganizationsAndActivitiesToProductTree(organizations, locations);
 			// AddConstraints();
 			AddMetaData(config);
@@ -117,6 +125,94 @@ namespace DummyDataGenerator
 			watch.Stop();
 			Console.WriteLine("Added locations in " + watch.ElapsedMilliseconds + "ms" + "(" + (watch.ElapsedMilliseconds / 1000) + "s)");
 			return result.ToArray();
+		}
+
+		struct ProductTreeData
+		{
+			public ProductTreeData(int org, int productsPerSupplier, int depth, int breadthPerLevel, int orgIter, int prodIter)
+			{
+				this.org = org;
+				this.productsPerSupplier = productsPerSupplier;
+				this.depth = depth;
+				this.breadthPerLevel = breadthPerLevel;
+				this.orgIter = orgIter;
+				this.prodIter = prodIter;
+			}
+
+			public int org { get; }
+			public int productsPerSupplier { get; }
+			public int depth { get; }
+			public int breadthPerLevel { get; }
+			public int orgIter;
+			public int prodIter;
+		}
+
+		private void GenerateProductTreesMultiThreaded(int[] organizationIds, int productsPerSupplier, int depth, int breadthPerLevel)
+		{
+			List<Thread> threads = new List<Thread>();
+			List<ProductTreeData> data = new List<ProductTreeData>();
+
+			for(int i = 0; i < organizationIds.Length; i++)
+			{
+				for (int j = 0; j < productsPerSupplier; j++)
+				{
+					threads.Add(new Thread(GenerateProductTree));
+					data.Add(new ProductTreeData(organizationIds[i], productsPerSupplier, depth, breadthPerLevel, i, j));
+				}
+			}
+
+			for(int i = 0; i < threads.Count; i++)
+			{
+				threads[i].Start(data[i]);
+			}
+
+			for (int i = 0; i < threads.Count; i++)
+			{
+				threads[i].Join();
+			}
+
+		}
+
+		private void GenerateProductTree(object data)
+		{
+			ProductTreeData d = (ProductTreeData) data;
+			Console.WriteLine("Starting new Thread..");
+			var watchTotal = System.Diagnostics.Stopwatch.StartNew();
+			var watch = System.Diagnostics.Stopwatch.StartNew();
+			int topLevelId = 0;
+
+			// generate the top level product
+			using (ISession session = connector.Connection.Session())
+			{
+				//string statement = "CREATE (n:Product { name: 'TopLevelProduct #o" + (i + 1) + "-p" + (j + 1) + "' }) RETURN ID(n) AS id";
+				string statement = InsertProduct(true, d.orgIter * d.productsPerSupplier + d.prodIter);
+				IStatementResult res = session.WriteTransaction(tx => tx.Run(statement));
+				IRecord record = res.Peek();
+				topLevelId = record["id"].As<int>();
+			}
+
+			List<int> previousResults = new List<int>();
+
+			// for the depth of the chain
+			for (int k = 0; k < d.depth; k++)
+			{
+				// in the first pass, generate the products for our top level product
+				if (k == 0)
+				{
+					previousResults.Add(topLevelId);
+					previousResults = GenerateProductRowAndRelations(d.orgIter, previousResults.ToArray(), d.breadthPerLevel);
+
+				}
+				// in subsequent passes, take the previous row of products and generate a new underlying row for all of them
+				else
+				{
+					previousResults = GenerateProductRowAndRelations(d.orgIter, previousResults.ToArray(), d.breadthPerLevel);
+				}
+
+			}
+			watch.Stop();
+			Console.WriteLine("Took " + watch.ElapsedMilliseconds + "ms " + "(" + (watch.ElapsedMilliseconds / 1000) + "s) " +
+				"to generate products and relations for product " + (d.prodIter + 1) + " for organisation " + (d.orgIter + 1));
 		}
 
 		/// <summary>

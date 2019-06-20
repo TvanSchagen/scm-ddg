@@ -81,8 +81,9 @@ namespace DummyDataGenerator.Utils
 
 	class FakeDataHelper
 	{
+		// we define a seed to use for each generated list, to make sure the data we generate is the same each time, useful for benchmarking purposes
 		const int SEED = 1234;
-				
+
 		public static List<Organization> GenerateOrganizations(int number)
 		{
 			Randomizer.Seed = new Random(SEED);

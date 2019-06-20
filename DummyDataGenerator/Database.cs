@@ -14,7 +14,7 @@ namespace DummyDataGenerator
 		protected List<Location> locations;
         public abstract void InitializeConnection();
 
-        public abstract void GenerateData(Configuration config);
+        public abstract void GenerateData(Configuration config, bool allowMultipleThreads);
 
         public abstract void CloseConnection();
 
