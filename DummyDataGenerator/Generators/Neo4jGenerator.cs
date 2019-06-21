@@ -30,11 +30,11 @@ namespace DummyDataGenerator
 			int[] locations = GenerateLocations(config.NumberOfSuppliers);
 			if (allowMultipleThreads)
 			{
-				mt_GenerateProductTrees(topLevelOrganizations, config.NumberOfProducts, config.ChainDepth, config.ChainBreadth);
+				mt_GenerateProductTrees(topLevelOrganizations, config.NumberOfProducts, config.ChainDepth, config.ChainBreadth, locations);
 			}
 			else
 			{
-				GenerateProductTrees(topLevelOrganizations, config.NumberOfProducts, config.ChainDepth, config.ChainBreadth);
+				GenerateProductTrees(topLevelOrganizations, config.NumberOfProducts, config.ChainDepth, config.ChainBreadth, locations);
 			}
 			AddOrganizationsAndActivitiesToProductTree(organizations, locations);
 			// AddConstraints();
@@ -129,7 +129,7 @@ namespace DummyDataGenerator
 
 		struct ProductTreeData
 		{
-			public ProductTreeData(int org, int productsPerSupplier, int depth, int breadthPerLevel, int orgIter, int prodIter)
+			public ProductTreeData(int org, int productsPerSupplier, int depth, int breadthPerLevel, int orgIter, int prodIter, int locationId)
 			{
 				this.org = org;
 				this.productsPerSupplier = productsPerSupplier;
@@ -137,6 +137,7 @@ namespace DummyDataGenerator
 				this.breadthPerLevel = breadthPerLevel;
 				this.orgIter = orgIter;
 				this.prodIter = prodIter;
+				this.locationId = locationId;
 			}
 
 			public int org { get; }
@@ -145,9 +146,10 @@ namespace DummyDataGenerator
 			public int breadthPerLevel { get; }
 			public int orgIter;
 			public int prodIter;
+			public int locationId;
 		}
 
-		private void mt_GenerateProductTrees(int[] organizationIds, int productsPerSupplier, int depth, int breadthPerLevel)
+		private void mt_GenerateProductTrees(int[] organizationIds, int productsPerSupplier, int depth, int breadthPerLevel, int[] locations)
 		{
 			List<Thread> threads = new List<Thread>();
 			List<ProductTreeData> data = new List<ProductTreeData>();
@@ -157,7 +159,7 @@ namespace DummyDataGenerator
 				for (int j = 0; j < productsPerSupplier; j++)
 				{
 					threads.Add(new Thread(mt_GenerateProductTree));
-					data.Add(new ProductTreeData(organizationIds[i], productsPerSupplier, depth, breadthPerLevel, i, j));
+					data.Add(new ProductTreeData(organizationIds[i], productsPerSupplier, depth, breadthPerLevel, i, j, locations[i]));
 				}
 			}
 
@@ -191,6 +193,20 @@ namespace DummyDataGenerator
 				topLevelId = record["id"].As<int>();
 			}
 
+			// add the top level product to the top level supplier
+			using (ISession session = connector.Connection.Session())
+			{
+				string statement = "MATCH (n:Product), (o:Organization), (l:Location)" +
+									" WHERE ID(n) = " + topLevelId +
+									" AND ID(o) = " + d.org +
+									" AND ID(l) = " + d.locationId +
+									" CREATE (o)-[:PERFORMS]->(a:Activity " + InsertActivity(d.orgIter) + ")," +
+									" (a)-[:PRODUCES]->(p)," +
+									" (a)-[:LOCATED_AT]->(l)," +
+									" (o)-[:HAS_LOCATION]->(o)";
+				IStatementResult res = session.WriteTransaction(tx => tx.Run(statement));
+			}
+
 			List<int> previousResults = new List<int>();
 
 			// for the depth of the chain
@@ -222,7 +238,7 @@ namespace DummyDataGenerator
 		/// <param name="productsPerSupplier"></param>
 		/// <param name="depth"></param>
 		/// <param name="breadthPerLevel"></param>
-		private void GenerateProductTrees(int[] organizationIdentifiers, int productsPerSupplier, int depth, int breadthPerLevel)
+		private void GenerateProductTrees(int[] organizationIdentifiers, int productsPerSupplier, int depth, int breadthPerLevel, int[] locationIdentifiers)
 		{
 			var watchTotal = System.Diagnostics.Stopwatch.StartNew();
 			// for each top level supplier
@@ -244,6 +260,21 @@ namespace DummyDataGenerator
 						IStatementResult res = session.WriteTransaction(tx => tx.Run(statement));
 						IRecord record = res.Peek();
 						topLevelId = record["id"].As<int>();
+					}
+
+					// add the top level product to the top level supplier
+					using (ISession session = connector.Connection.Session())
+					{
+						string statement = "MATCH (p:Product), (o:Organization), (l:Location)" +
+											" WHERE ID(p) = " + topLevelId +
+											" AND ID(o) = " + organizationIdentifiers[i] +
+											" AND ID(l) = " + locationIdentifiers[i] +
+											" CREATE (o)-[:PERFORMS]->(a:Activity " + InsertActivity(i) + ")," +
+											" (a)-[:PRODUCES]->(p)," +
+											" (a)-[:LOCATED_AT]->(l)" +
+											" MERGE (o)-[:HAS_LOCATION]->(l)";
+						IStatementResult res = session.WriteTransaction(tx => tx.Run(statement));
+						IRecord record = res.Peek();
 					}
 
 					List<int> previousResults = new List<int>();
@@ -349,9 +380,11 @@ namespace DummyDataGenerator
 										" WHERE ID(p) = " + productId +
 										" AND ID(o) = " + organizationId +
 										" AND ID(l) = " + locationId +
+										" AND NOT p.name STARTS WITH 'Top Level Product'" +
 										" CREATE (o)-[:PERFORMS]->(a:Activity " + InsertActivity(i) + ")," +
 										" (a)-[:PRODUCES]->(p)," +
-										" (a)-[:LOCATED_AT]->(l)";
+										" (a)-[:LOCATED_AT]->(l)," +
+										" (o)-[:HAS_LOCATION]->(l)";
 					//" CREATE (o)-[:CARRIES_OUT]->(a:Activity { name:'Activity # " + i + "' })-[:PRODUCES]->(p)";
 					session.WriteTransaction(tx => tx.Run(statement));
 				}
