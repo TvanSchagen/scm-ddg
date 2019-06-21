@@ -139,6 +139,7 @@ namespace DummyDataGenerator
 			Console.WriteLine("Attempting to generate data");
 			database.GenerateFakeData(10000);
 			bool allow = allowMultipleThreads == ConsoleKey.Y;
+			Console.WriteLine("Started generating at " + DateTime.Now);
 			database.GenerateData(conf, allow);
 			Console.WriteLine("Closing connection");
 			database.CloseConnection();

@@ -49,6 +49,29 @@ namespace DummyDataGenerator.Connectors
 			}
 		}
 
+		public MySqlConnection NewConnection()
+		{
+			MySqlConnection c = null;
+			string connstring = string.Format(
+				"Server={0}; database={1}; UID={2}; password={3}",
+				Env.GetString("MYSQL_HOST"),
+				Env.GetString("MYSQL_DB"),
+				Env.GetString("MYSQL_USER"),
+				Env.GetString("MYSQL_PW")
+			);
+			try
+			{
+				c = new MySqlConnection(connstring);
+				c.Open();
+				Console.WriteLine("Opened New MySql connection with status: " + conn.State.ToString());
+			}
+			catch (MySqlException e)
+			{
+				Console.WriteLine(e);
+			}
+			return c;
+		}
+
 		public void Close()
 		{
 			conn?.Close();
