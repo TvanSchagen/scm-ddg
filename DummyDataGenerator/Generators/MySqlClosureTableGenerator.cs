@@ -197,14 +197,14 @@ namespace DummyDataGenerator.Generators
 							previousResults.Add(topLevelId);
 							// also add the top level id to all results (because it isn't returned as childs when generating the product row and relations)
 							allResults.Add(topLevelId);
-							previousResults = GenerateProductRowAndRelations(null, previousResults, breadthPerLevel, connector.Connection);
+							previousResults = GenerateProductRowAndRelations(null, previousResults, breadthPerLevel, connector.Connection, depth);
 							allResults.AddRange(previousResults);
 
 						}
 						// in subsequent passes, take the previous row of products and generate a new underlying row for all of them
 						else
 						{
-							previousResults = GenerateProductRowAndRelations(allResults, previousResults, breadthPerLevel, connector.Connection);
+							previousResults = GenerateProductRowAndRelations(allResults, previousResults, breadthPerLevel, connector.Connection, depth);
 							allResults.AddRange(previousResults);
 						}
 
@@ -226,7 +226,7 @@ namespace DummyDataGenerator.Generators
 		/// <param name="immediateParentProductIdentifiers">the list of parent products for which a number of child products has to be generated</param>
 		/// <param name="breadthPerLevel">the number of child products that have to be generated per parent product</param>
 		/// <returns>a list of the id's of the child products that have been created</returns>
-		private List<int> GenerateProductRowAndRelations(List<int> allParentProductIdentifiers, List<int> immediateParentProductIdentifiers, int breadthPerLevel, MySqlConnection c)
+		private List<int> GenerateProductRowAndRelations(List<int> allParentProductIdentifiers, List<int> immediateParentProductIdentifiers, int breadthPerLevel, MySqlConnection c, int depth)
 		{
 			List<int> childProductsCreated = new List<int>();
 			int i = 0;
@@ -251,6 +251,7 @@ namespace DummyDataGenerator.Generators
 					
 					// then add a row for the reference to the immediate parent
 					string statement3 = "INSERT INTO consists_of(parent_product_id, child_product_id) VALUES(" + immediateParentProductIdentifiers[i] + "," + childProductId + ");";
+					Console.WriteLine("Depth: " + depth);
 					MySqlCommand com3 = new MySqlCommand(statement3, c);
 					com3.ExecuteNonQuery();
 
@@ -269,6 +270,7 @@ namespace DummyDataGenerator.Generators
 						{
 							// inserto into hierarchy
 							string statement5 = string.Format("INSERT INTO consists_of(parent_product_id, child_product_id) VALUES(" + productIds[k] + "," + childProductId + ");");
+							Console.WriteLine("Depth: " + k);
 							// Console.WriteLine("Inserting: " + productIds[k]);
 							MySqlCommand com5 = new MySqlCommand(statement5, c);
 							com5.ExecuteNonQuery();
