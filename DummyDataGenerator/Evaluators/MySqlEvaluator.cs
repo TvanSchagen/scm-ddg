@@ -16,6 +16,7 @@ namespace DummyDataGenerator.Evaluators
 		const int NUMBER_OF_REPETITIONS = 10;
 
 		protected MySqlConnector connector;
+
 		string output = "";
 
 		protected List<string> databases = new List<string>();
@@ -29,14 +30,14 @@ namespace DummyDataGenerator.Evaluators
 			AddHeadersToOutput();
 			foreach (string db in databases)
 			{
-				//EnablePerformanceSchema(db);
+				EnablePerformanceSchema(db);
 				for (int j = 0; j < queries.Count; j++)
 				{
 					CaptureDatabaseSize(db);
 					ExecuteQuery(j + 1, queries[j], NUMBER_OF_REPETITIONS, db);
 					RetrieveResult(j + 1, queries[j], NUMBER_OF_REPETITIONS);
 				}
-				//DisablePerformanceSchema(db);
+				DisablePerformanceSchema(db);
 			}
 			CloseConnection();
 			WriteOutputToFile("mysql_eval.csv");
@@ -44,13 +45,13 @@ namespace DummyDataGenerator.Evaluators
 
 		private void AddDatabases()
 		{
-			/*databases.Add("v2_scm_al_breadth2_depth2");
+			databases.Add("v2_scm_al_breadth2_depth2");
 			databases.Add("v2_scm_al_breadth2_depth4");
-			databases.Add("v2_scm_al_breadth2_depth6");*/
+			databases.Add("v2_scm_al_breadth2_depth6");
 			databases.Add("v2_scm_al_breadth2_depth8");
-			/*databases.Add("v2_scm_al_breadth2_depth10");
+			databases.Add("v2_scm_al_breadth2_depth10");
 			databases.Add("v2_scm_al_breadth2_depth12");
-			databases.Add("v2_scm_al_breadth2_depth14");*/
+			databases.Add("v2_scm_al_breadth2_depth14");
 		}
 
 		private void AddQueries()
@@ -68,7 +69,6 @@ namespace DummyDataGenerator.Evaluators
 				output = Regex.Replace(output, @"\s+", " ");
 				Logger.Debug(output);
 				queries.Add(output);
-				Logger.Debug("Closing file " + file + "..");
 			}
 		}
 
@@ -86,8 +86,8 @@ namespace DummyDataGenerator.Evaluators
 			string statement = string.Format(
 				@"USE {0};
 				SET SQL_SAFE_UPDATES = 0;
-				UPDATE performance_schema.setup_actors SET ENABLED = 'NO', HISTORY = 'NO' WHERE HOST = '%' AND USER = '%';
-				INSERT INTO performance_schema.setup_actors(HOST,USER,ROLE,ENABLED,HISTORY) VALUES('%', '{1}', '%', 'YES', 'YES');
+				UPDATE performance_schema.setup_actors SET ENABLED = 'YES', HISTORY = 'YES' WHERE HOST = '%' AND USER = '%';
+				
 				UPDATE performance_schema.setup_instruments SET ENABLED = 'YES', TIMED = 'YES' WHERE NAME LIKE '%statement/%';
 				UPDATE performance_schema.setup_instruments SET ENABLED = 'YES', TIMED = 'YES' WHERE NAME LIKE '%stage/%'; 
 				UPDATE performance_schema.setup_consumers SET ENABLED = 'YES' WHERE NAME LIKE '%events_statements_%'; 
@@ -102,7 +102,7 @@ namespace DummyDataGenerator.Evaluators
 
 		private void ExecuteQuery(int queryNumber, string query, int repetitions, string database)
 		{
-			Console.WriteLine("Executing query: " + (queryNumber + 1) + " " + NUMBER_OF_REPETITIONS + " times on database: " + database);
+			Logger.Info("Executing query: " + queryNumber + " " + NUMBER_OF_REPETITIONS + " times on database: " + database);
 			string stmt = string.Format(query);
 			MySqlCommand cmd = new MySqlCommand(stmt, connector.Connection);
 			for (int i = 0; i < repetitions; i++)
@@ -113,7 +113,7 @@ namespace DummyDataGenerator.Evaluators
 
 		private void RetrieveResult(int queryNumber, string query, int repetitions)
 		{
-			Console.WriteLine("Retrieving results for query: " + (queryNumber + 1));
+			Logger.Info("Retrieving results for query: " + (queryNumber));
 			output += "query " + (queryNumber + 1);
 			List<int> eventIds = new List<int>();
 			float totaExecutionTime = 0.0f;
@@ -124,15 +124,14 @@ namespace DummyDataGenerator.Evaluators
 			//com.Prepare();
 			//com.Parameters.AddWithValue("@query", query);
 			MySqlDataReader reader = com.ExecuteReader();
-			Console.WriteLine(com.CommandText);
 			try
 			{
 				while (reader.Read())
 				{
-					int id = reader.GetInt16(0);
+					//int id = reader.GetInt16(0);
 					float responseTime = reader.GetFloat(1);
-					Console.WriteLine("Response time for query " + queryNumber + " is " + responseTime);
-					eventIds.Add(id);
+					Logger.Debug("Response time for query " + queryNumber + " is " + responseTime);
+					//eventIds.Add(id);
 					totaExecutionTime += responseTime;
 					output += ";" + responseTime;
 				}
@@ -140,16 +139,16 @@ namespace DummyDataGenerator.Evaluators
 			}
 			catch (MySqlException e)
 			{
-				Console.WriteLine(e);
+				Logger.Error("Error: " +e);
 			}
 			finally
 			{
 				reader.Close();
 			}
 
-			Console.WriteLine("Average execution time: " + totaExecutionTime / repetitions);
+			Logger.Info("Average execution time: " + totaExecutionTime / repetitions);
 
-			foreach (int i in eventIds)
+			/*foreach (int i in eventIds)
 			{
 				string statement2 = string.Format("SELECT event_name AS Stage, TRUNCATE(TIMER_WAIT/1000000000000,6) AS Duration FROM performance_schema.events_stages_history_long WHERE NESTING_EVENT_ID = {0}", i);
 				MySqlCommand command2 = new MySqlCommand(statement2, connector.Connection);
@@ -169,7 +168,7 @@ namespace DummyDataGenerator.Evaluators
 				{
 					reader2.Close();
 				}
-			}
+			}*/
 
 		}
 
@@ -192,10 +191,6 @@ namespace DummyDataGenerator.Evaluators
 				@"USE {0};
 				SET SQL_SAFE_UPDATES = 0;
 				DELETE FROM performance_schema.setup_actors WHERE ENABLED = 'YES' AND HISTORY = 'YES' AND HOST = '%' AND USER = '{1}' AND ROLE = '%';
-				UPDATE performance_schema.setup_instruments SET ENABLED = 'NO', TIMED = 'NO' WHERE NAME LIKE '%statement/%';
-				UPDATE performance_schema.setup_instruments SET ENABLED = 'NO', TIMED = 'NO' WHERE NAME LIKE '%stage/%'; 
-				UPDATE performance_schema.setup_consumers SET ENABLED = 'NO' WHERE NAME LIKE '%events_statements_%'; 
-				UPDATE performance_schema.setup_consumers SET ENABLED = 'NO' WHERE NAME LIKE '%events_stages_%';
 				TRUNCATE performance_schema.events_statements_history_long",
 				database, Env.GetString("MYSQL_USER"));
 			MySqlCommand command = new MySqlCommand(statement, connector.Connection);

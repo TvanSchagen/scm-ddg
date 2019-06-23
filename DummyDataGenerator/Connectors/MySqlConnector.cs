@@ -31,7 +31,7 @@ namespace DummyDataGenerator.Connectors
 			if (Connection == null)
 			{
 				string connstring = string.Format(
-					"Server={0}; database={1}; UID={2}; password={3}", 
+					"Server={0}; database={1}; UID={2}; password={3}; default command timeout=60;", 
 					Env.GetString("MYSQL_HOST"), 
 					Env.GetString("MYSQL_DB"),
 					Env.GetString("MYSQL_USER"),

@@ -198,8 +198,8 @@ namespace DummyDataGenerator
 			// add the top level product to the top level supplier
 			using (ISession session = connector.Connection.Session())
 			{
-				string statement = "MATCH (n:Product), (o:Organization), (l:Location)" +
-									" WHERE ID(n) = " + topLevelId +
+				string statement = "MATCH (p:Product), (o:Organization), (l:Location)" +
+									" WHERE ID(p) = " + topLevelId +
 									" AND ID(o) = " + d.org +
 									" AND ID(l) = " + d.locationId +
 									" CREATE (o)-[:PERFORMS]->(a:Activity " + InsertActivity(d.orgIter) + ")," +

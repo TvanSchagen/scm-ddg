@@ -29,7 +29,7 @@ namespace DummyDataGenerator.Evaluators
 				ExecuteQueryAndRetrieveResult(j, queries[j], "");
 			}
 			CloseConnection();
-			WriteOutputToFile("scm_gr_breadthx_depthx");
+			WriteOutputToFile("scm_gr_breadth2_depth14.csv");
 		}
 
 		private void AddQueries()
@@ -37,9 +37,10 @@ namespace DummyDataGenerator.Evaluators
 			string path = @"../../../Queries/Cypher/";
 			foreach (string file in Directory.EnumerateFiles(path, "*.cql"))
 			{
-				Logger.Debug("Reading file " + file + "..");
+				Console.WriteLine(file + ", path" + path);
+				Logger.Info("Reading file " + file + "..");
 				string output = "";
-				string[] lines = File.ReadAllLines(path + file);
+				string[] lines = File.ReadAllLines(file);
 				foreach (string line in lines)
 				{
 					output += line + " ";
@@ -47,14 +48,12 @@ namespace DummyDataGenerator.Evaluators
 				output = Regex.Replace(output, @"\s+", " ");
 				Logger.Debug(output);
 				queries.Add(output);
-				Logger.Debug("Closing file " + file + "..");
 			}
 		}
 
-
 		private void ExecuteQueryAndRetrieveResult(int iteration, string query, string database)
 		{
-			Console.WriteLine("Executing and retrieving results for query: " + (iteration + 1));
+			Logger.Info("Executing and retrieving results for query: " + (iteration + 1));
 			output += database + " query " + (iteration + 1);
 			List<int> eventIds = new List<int>();
 			int totaExecutionTime = 0;
@@ -64,17 +63,17 @@ namespace DummyDataGenerator.Evaluators
 				{
 					IStatementResult res = session.WriteTransaction(tx => tx.Run(query));
 					int responseTime = res.Summary.ResultConsumedAfter.Milliseconds;
-					Console.WriteLine("Available after: " + res.Summary.ResultAvailableAfter.Milliseconds + " Consumed after: " + responseTime);
+					Logger.Debug("Available after: " + res.Summary.ResultAvailableAfter.Milliseconds + " Consumed after: " + responseTime);
 					totaExecutionTime += responseTime;
 					output += ";" + responseTime;
 				}
 			}
-			Console.WriteLine("Average execution time: " + totaExecutionTime / NUMBER_OF_REPETITIONS);
+			Logger.Info("Average execution time: " + totaExecutionTime / NUMBER_OF_REPETITIONS);
 		}
 
 		private void WriteOutputToFile(string filename)
 		{
-			string path = @"../../../../" + filename + " .csv";
+			string path = @"../../../../" + filename;
 			using (FileStream fs = File.Create(path))
 			{
 				// adds the keys to the file
@@ -85,6 +84,7 @@ namespace DummyDataGenerator.Evaluators
 
 		private void AddHeadersToOutput()
 		{
+			Logger.Info("Adding headers to output..");
 			output += "query number";
 			for (int i = 0; i < NUMBER_OF_REPETITIONS; i++)
 			{

@@ -55,7 +55,7 @@ namespace DummyDataGenerator
 			if (input == ConsoleKey.E)
 			{
 				Console.WriteLine();
-				Logger.Info("Choose your database to evaluate: [N]eo4j / [A]djacency List MySQL / [C]losure Table MySQL");
+				Logger.Info("Choose your database to evaluate: ([N]eo4j / [A]djacency List MySQL / [C]losure Table MySQL)");
 				ChooseEvaluator(Console.ReadKey().Key);
 			}
 			// G for generating mode
@@ -88,6 +88,7 @@ namespace DummyDataGenerator
 		/// <param name="input">The key-input with which the user chooses their database</param>
 		private static void ChooseEvaluator(ConsoleKey input)
 		{
+			Console.WriteLine("\n");
 			if (input == ConsoleKey.A)
 			{
 				MySqlEvaluator e = new MySqlEvaluator();

@@ -45,10 +45,12 @@ namespace DummyDataGenerator.Utils
 
 		private static void WriteLine(string message, Level level)
 		{
+			// don't log message if current logger level is below the message level
 			if (level < currentLevel)
 			{
 				return;
 			}
+			// set colors
 			Console.BackgroundColor = GetColors(level)[0];
 			Console.ForegroundColor = GetColors(level)[1];
 			Console.WriteLine("[{0}]: {1}", DateTime.Now, message);
