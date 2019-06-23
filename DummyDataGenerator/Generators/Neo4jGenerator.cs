@@ -1,4 +1,5 @@
 ﻿using DummyDataGenerator.Connectors;
+using DummyDataGenerator.Utils;
 using Neo4j.Driver.V1;
 using System;
 using System.Collections.Generic;
@@ -39,7 +40,7 @@ namespace DummyDataGenerator
 			AddOrganizationsAndActivitiesToProductTree(organizations, locations);
 			// AddConstraints();
 			AddMetaData(config);
-			Console.WriteLine("Program completed.");
+			Logger.Info("Program completed.");
 		}
 
 		/// <summary>
@@ -54,7 +55,7 @@ namespace DummyDataGenerator
 				IStatementResult res = session.Run(statement);
 			}
 			watch.Stop();
-			Console.WriteLine("Refreshed schema in " + watch.ElapsedMilliseconds + "ms" + "(" + (watch.ElapsedMilliseconds / 1000) + "s)");
+			Logger.Info("Refreshed schema in " + watch.ElapsedMilliseconds + "ms" + "(" + (watch.ElapsedMilliseconds / 1000) + "s)");
 		}
 
 		/// <summary>
@@ -78,7 +79,7 @@ namespace DummyDataGenerator
 				}
 			}
 			watch.Stop();
-			Console.WriteLine("Added top level organizations in " + watch.ElapsedMilliseconds + "ms" + "(" + (watch.ElapsedMilliseconds / 1000) + "s)");
+			Logger.Info("Added top level organizations in " + watch.ElapsedMilliseconds + "ms" + "(" + (watch.ElapsedMilliseconds / 1000) + "s)");
 			return result.ToArray();
 		}
 
@@ -103,7 +104,7 @@ namespace DummyDataGenerator
 				}
 			}
 			watch.Stop();
-			Console.WriteLine("Added organizations in " + watch.ElapsedMilliseconds + "ms" + "(" + (watch.ElapsedMilliseconds / 1000) + "s)");
+			Logger.Info("Added organizations in " + watch.ElapsedMilliseconds + "ms" + "(" + (watch.ElapsedMilliseconds / 1000) + "s)");
 			return result.ToArray();
 		}
 
@@ -123,7 +124,7 @@ namespace DummyDataGenerator
 				}
 			}
 			watch.Stop();
-			Console.WriteLine("Added locations in " + watch.ElapsedMilliseconds + "ms" + "(" + (watch.ElapsedMilliseconds / 1000) + "s)");
+			Logger.Info("Added locations in " + watch.ElapsedMilliseconds + "ms" + "(" + (watch.ElapsedMilliseconds / 1000) + "s)");
 			return result.ToArray();
 		}
 
@@ -151,6 +152,7 @@ namespace DummyDataGenerator
 
 		private void mt_GenerateProductTrees(int[] organizationIds, int productsPerSupplier, int depth, int breadthPerLevel, int[] locations)
 		{
+			var watch = System.Diagnostics.Stopwatch.StartNew();
 			List<Thread> threads = new List<Thread>();
 			List<ProductTreeData> data = new List<ProductTreeData>();
 
@@ -166,21 +168,21 @@ namespace DummyDataGenerator
 			for(int i = 0; i < threads.Count; i++)
 			{
 				threads[i].Start(data[i]);
+				Logger.Debug("Starting thread " + i + "..");
 			}
 
 			for (int i = 0; i < threads.Count; i++)
 			{
 				threads[i].Join();
 			}
+			watch.Stop();
+			Logger.Info("Took " + watch.ElapsedMilliseconds + "ms " + "(" + (watch.ElapsedMilliseconds / 1000) + "s) to generate products and relations");
 
 		}
 
 		private void mt_GenerateProductTree(object data)
 		{
 			ProductTreeData d = (ProductTreeData) data;
-			Console.WriteLine("Starting new Thread..");
-			var watchTotal = System.Diagnostics.Stopwatch.StartNew();
-			var watch = System.Diagnostics.Stopwatch.StartNew();
 			int topLevelId = 0;
 
 			// generate the top level product
@@ -202,8 +204,8 @@ namespace DummyDataGenerator
 									" AND ID(l) = " + d.locationId +
 									" CREATE (o)-[:PERFORMS]->(a:Activity " + InsertActivity(d.orgIter) + ")," +
 									" (a)-[:PRODUCES]->(p)," +
-									" (a)-[:LOCATED_AT]->(l)," +
-									" (o)-[:HAS_LOCATION]->(o)";
+									" (a)-[:LOCATED_AT]->(l)" +
+									" MERGE (o)-[:HAS_LOCATION]->(l)";
 				IStatementResult res = session.WriteTransaction(tx => tx.Run(statement));
 			}
 
@@ -226,9 +228,6 @@ namespace DummyDataGenerator
 				}
 
 			}
-			watch.Stop();
-			Console.WriteLine("Took " + watch.ElapsedMilliseconds + "ms " + "(" + (watch.ElapsedMilliseconds / 1000) + "s) " +
-				"to generate products and relations for product " + (d.prodIter + 1) + " for organisation " + (d.orgIter + 1));
 		}
 
 		/// <summary>
@@ -244,7 +243,7 @@ namespace DummyDataGenerator
 			// for each top level supplier
 			for (int i = 0; i < organizationIdentifiers.Length; i++)
 			{
-				Console.WriteLine("Generating for Organization: " + (i + 1));
+				Logger.Debug("Generating for Organization: " + (i + 1));
 
 				// for each of their products
 				for (int j = 0; j < productsPerSupplier; j++)
@@ -297,12 +296,12 @@ namespace DummyDataGenerator
 
 					}
 					watch.Stop();
-					Console.WriteLine("Took " + watch.ElapsedMilliseconds + "ms " + "(" + (watch.ElapsedMilliseconds / 1000) + "s) " +
+					Logger.Info("Took " + watch.ElapsedMilliseconds + "ms " + "(" + (watch.ElapsedMilliseconds / 1000) + "s) " +
 						"to generate products and relations for product " + (j + 1) + " for organisation " + (i + 1));
 				}
 			}
 			watchTotal.Stop();
-			Console.WriteLine("Took " + watchTotal.ElapsedMilliseconds + "ms " + "(" + (watchTotal.ElapsedMilliseconds / 1000) + "s) in total");
+			Logger.Info("Took " + watchTotal.ElapsedMilliseconds + "ms " + "(" + (watchTotal.ElapsedMilliseconds / 1000) + "s) in total");
 		}
 
 		/// <summary>
@@ -356,6 +355,7 @@ namespace DummyDataGenerator
 		{
 			var watch = System.Diagnostics.Stopwatch.StartNew();
 			List<int> productIds = new List<int>();
+			Logger.Debug("Gettings product IDs to create relations to organizations..");
 			using (ISession session = connector.Connection.Session())
 			{
 				string statement = "MATCH (n:Product)" +
@@ -365,9 +365,9 @@ namespace DummyDataGenerator
 				{
 					productIds.Add(r["id"].As<int>());
 				}
-			}
-			
+			}	
 			int[] productIdsArray = productIds.ToArray();
+			Logger.Debug("Retrieved " + productIdsArray.Length + " products");
 
 			for (int i = 0; i < productIdsArray.Length; i++)
 			{
@@ -380,17 +380,19 @@ namespace DummyDataGenerator
 										" WHERE ID(p) = " + productId +
 										" AND ID(o) = " + organizationId +
 										" AND ID(l) = " + locationId +
+										// we need to make sure not to assign the top level products twice
 										" AND NOT p.name STARTS WITH 'Top Level Product'" +
 										" CREATE (o)-[:PERFORMS]->(a:Activity " + InsertActivity(i) + ")," +
 										" (a)-[:PRODUCES]->(p)," +
-										" (a)-[:LOCATED_AT]->(l)," +
-										" (o)-[:HAS_LOCATION]->(l)";
+										" (a)-[:LOCATED_AT]->(l)" +
+										// and not create the has location relationship multiple times
+										"MERGE (o)-[:HAS_LOCATION]->(l)";
 					//" CREATE (o)-[:CARRIES_OUT]->(a:Activity { name:'Activity # " + i + "' })-[:PRODUCES]->(p)";
 					session.WriteTransaction(tx => tx.Run(statement));
 				}
 			}
 			watch.Stop();
-			Console.WriteLine("Took " + watch.ElapsedMilliseconds + "ms " + "(" + (watch.ElapsedMilliseconds / 1000) + "s) to add organizations and activities");
+			Logger.Info("Took " + watch.ElapsedMilliseconds + "ms " + "(" + (watch.ElapsedMilliseconds / 1000) + "s) " + "(" + (watch.ElapsedMilliseconds / 1000 / 60) + "m) to add organizations and activities");
 		}
 
 		/// <summary>
@@ -428,7 +430,6 @@ namespace DummyDataGenerator
         {
 			connector?.Close();
         }
-
 
 		public string InsertProduct(bool isTopLevel, int id)
 		{

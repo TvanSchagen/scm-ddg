@@ -4,6 +4,7 @@ using System.Text;
 using DotNetEnv;
 using DummyDataGenerator.Evaluators;
 using DummyDataGenerator.Generators;
+using DummyDataGenerator.Utils;
 
 namespace DummyDataGenerator
 {
@@ -23,24 +24,24 @@ namespace DummyDataGenerator
 			string envPath = @"../../../../.env";
 			if (File.Exists(envPath))
 			{
-				Console.WriteLine("Loaded existing .env file with connection properties");
+				Logger.Info("Loaded existing .env file with connection properties");
 				// load environment file with connection properties
 				Env.Load(envPath);
 			}
 			else
 			{
-				Console.WriteLine("Did not find an .env file, creating one..");
+				Logger.Warn("Did not find an .env file, creating one..");
 				// create an .env file if it doesn't exist
 				using (FileStream fs = File.Create(envPath))
 				{
 					// adds the keys to the file
 					Byte[] info = new UTF8Encoding(true).GetBytes("MYSQL_HOST =\nMYSQL_DB = \nMYSQL_USER = \nMYSQL_PW = \nNEO4J_HOST = \nNEO4J_USER = \nNEO4J_PW =");
 					fs.Write(info, 0, info.Length);
-					Console.WriteLine("Created .env file, please specify connection properties in the file and restart the program");
+					Logger.Info("Created .env file, please specify connection properties in the file and restart the program");
 				}
 				System.Environment.Exit(0);
 			}
-			Console.WriteLine("Choose mode: E for evaluation, G for generation");
+			Logger.Info("Choose your application mode: [G]enerate data / [E]valuate database");
 			ChooseMode(Console.ReadKey().Key);
 		}
 
@@ -53,25 +54,27 @@ namespace DummyDataGenerator
 			// E for evaluator mode
 			if (input == ConsoleKey.E)
 			{
-				Console.WriteLine("\nChoose your database to evaluate: \n\tN:\tNeo4j\n\tA:\tMySQL (adjecency list)\n\tC:\tMySQL (closure table)\n");
+				Console.WriteLine();
+				Logger.Info("Choose your database to evaluate: [N]eo4j / [A]djacency List MySQL / [C]losure Table MySQL");
 				ChooseEvaluator(Console.ReadKey().Key);
 			}
 			// G for generating mode
 			else if (input == ConsoleKey.G)
 			{
+				Console.WriteLine();
 				// get user input for data generation parameters
-				Console.WriteLine("\nEnter parameters (leave blank for default):");
+				Logger.Info("Enter parameters (leave blank for default):");
 				Configuration conf = new Configuration(
-					ReadInt("chain depth: ", DEFAULT_CHAIN_DEPTH),
-					ReadInt("chain breadth: ", DEFAULT_CHAIN_BREADTH),
-					ReadInt("activities: ", DEFAULT_NO_OF_ACTIVITIES),
-					ReadInt("suppliers: ", DEFAULT_NO_OF_SUPPLIERS),
-					ReadInt("top level suppliers: ", DEFAULT_NO_OF_TOPLEVELSUPPLIERS),
-					ReadInt("products per top level supplier: ", DEFAULT_NO_OF_PRODUCTS)
+					ReadInt("Chain depth: ", DEFAULT_CHAIN_DEPTH),
+					ReadInt("Chain breadth: ", DEFAULT_CHAIN_BREADTH),
+					ReadInt("Number of activities: ", DEFAULT_NO_OF_ACTIVITIES),
+					ReadInt("Number of organizations: ", DEFAULT_NO_OF_SUPPLIERS),
+					ReadInt("Number of top level organizations: ", DEFAULT_NO_OF_TOPLEVELSUPPLIERS),
+					ReadInt("Products per top level organization: ", DEFAULT_NO_OF_PRODUCTS)
 				);
-				Console.WriteLine("Allow multiple threads to be used? (Y/N)");
+				Logger.Info("Allow multiple threads to be used: ([Y]es/[N]o)");
 				ConsoleKey allow = Console.ReadKey().Key;
-				Console.WriteLine("\nChoose your database to import the data into: \n\tN:\tNeo4j\n\tA:\tMySQL (adjecency list)\n\tC:\tMySQL (closure table)\n");
+				Logger.Info("Choose your database to use for generation: ([N]eo4j / [A]djacency List MySQL / [C]losure Table MySQL)");
 				ChooseGenerator(conf, allow, Console.ReadKey().Key);
 			} else
 			{
@@ -102,7 +105,7 @@ namespace DummyDataGenerator
 			}
 			else
 			{
-				Console.WriteLine("Unsupported input, choose another: ");
+				Logger.Warn("Unsupported Input, please try again");
 				ChooseEvaluator(Console.ReadKey().Key);
 				return;
 			}
@@ -130,18 +133,18 @@ namespace DummyDataGenerator
 			}
 			else
 			{
-				Console.WriteLine("Unsupported input, choose another: ");
+				Logger.Warn("Unsupported Input, please try again");
 				ChooseGenerator(conf, allowMultipleThreads, Console.ReadKey().Key);
 				return;
 			}
-			Console.WriteLine("\nInitializing connection");
+			Logger.Info("Initializing connection..");
 			database.InitializeConnection();
-			Console.WriteLine("Attempting to generate data");
+			Logger.Info("Preparing dummy data..");
 			database.GenerateFakeData(10000);
 			bool allow = allowMultipleThreads == ConsoleKey.Y;
-			Console.WriteLine("Started generating at " + DateTime.Now);
+			Logger.Info("Starting data generation process..");
 			database.GenerateData(conf, allow);
-			Console.WriteLine("Closing connection");
+			Logger.Info("Closing connection..");
 			database.CloseConnection();
 			Console.ReadLine();
 		}

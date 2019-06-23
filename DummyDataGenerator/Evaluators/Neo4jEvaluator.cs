@@ -1,9 +1,11 @@
 ﻿using DummyDataGenerator.Connectors;
+using DummyDataGenerator.Utils;
 using Neo4j.Driver.V1;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace DummyDataGenerator.Evaluators
 {
@@ -32,7 +34,21 @@ namespace DummyDataGenerator.Evaluators
 
 		private void AddQueries()
 		{
-			queries.Add("MATCH (n:Product) RETURN n.name");
+			string path = @"../../../Queries/Cypher/";
+			foreach (string file in Directory.EnumerateFiles(path, "*.cql"))
+			{
+				Logger.Debug("Reading file " + file + "..");
+				string output = "";
+				string[] lines = File.ReadAllLines(path + file);
+				foreach (string line in lines)
+				{
+					output += line + " ";
+				}
+				output = Regex.Replace(output, @"\s+", " ");
+				Logger.Debug(output);
+				queries.Add(output);
+				Logger.Debug("Closing file " + file + "..");
+			}
 		}
 
 
@@ -84,6 +100,7 @@ namespace DummyDataGenerator.Evaluators
 
 		private void CloseConnection()
 		{
+			Logger.Info("Closing connection..");
 			connector.Close();
 		}
 

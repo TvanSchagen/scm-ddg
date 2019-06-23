@@ -1,8 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Text;
+using System.Text.RegularExpressions;
 using DotNetEnv;
 using DummyDataGenerator.Connectors;
+using DummyDataGenerator.Utils;
 using MySql.Data.MySqlClient;
 
 namespace DummyDataGenerator.Evaluators
@@ -22,7 +25,20 @@ namespace DummyDataGenerator.Evaluators
 
 		private void AddQueries()
 		{
-			queries.Add("SELECT * FROM product");
+			string path = @"../../../Queries/SQL/Closure Table/";
+			foreach (string file in Directory.EnumerateFiles(path, "*.sql"))
+			{
+				Logger.Debug("Reading file " + file + "..");
+				string output = "";
+				string[] lines = File.ReadAllLines(path + file);
+				foreach (string line in lines)
+				{
+					output += line + " ";
+				}
+				output = Regex.Replace(output, @"\s+", " ");
+				queries.Add(output);
+				Logger.Debug("Closing file " + file + "..");
+			}
 		}
 
 	}

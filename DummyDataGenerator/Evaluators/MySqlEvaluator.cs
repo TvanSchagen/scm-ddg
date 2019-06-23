@@ -2,8 +2,10 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using System.Text.RegularExpressions;
 using DotNetEnv;
 using DummyDataGenerator.Connectors;
+using DummyDataGenerator.Utils;
 using MySql.Data.MySqlClient;
 
 namespace DummyDataGenerator.Evaluators
@@ -25,15 +27,16 @@ namespace DummyDataGenerator.Evaluators
 			AddQueries();
 			OpenConnection();
 			AddHeadersToOutput();
-			foreach (string d in databases)
+			foreach (string db in databases)
 			{
-				ConfigurePerformanceSchema(d);
-				CaptureDatabaseSize(d);
+				//EnablePerformanceSchema(db);
 				for (int j = 0; j < queries.Count; j++)
 				{
-					ExecuteQuery(j, queries[j], NUMBER_OF_REPETITIONS, d);
-					RetrieveResult(j, queries[j], NUMBER_OF_REPETITIONS);
+					CaptureDatabaseSize(db);
+					ExecuteQuery(j + 1, queries[j], NUMBER_OF_REPETITIONS, db);
+					RetrieveResult(j + 1, queries[j], NUMBER_OF_REPETITIONS);
 				}
+				//DisablePerformanceSchema(db);
 			}
 			CloseConnection();
 			WriteOutputToFile("mysql_eval.csv");
@@ -41,19 +44,32 @@ namespace DummyDataGenerator.Evaluators
 
 		private void AddDatabases()
 		{
-			databases.Add("scm_al_breadth2_depth2");
-			databases.Add("scm_al_breadth2_depth4");
-			databases.Add("scm_al_breadth2_depth6");
-			databases.Add("scm_al_breadth2_depth8");
-			databases.Add("scm_al_breadth2_depth10");
-			databases.Add("scm_al_breadth2_depth12");
-			databases.Add("scm_al_breadth2_depth14");
+			/*databases.Add("v2_scm_al_breadth2_depth2");
+			databases.Add("v2_scm_al_breadth2_depth4");
+			databases.Add("v2_scm_al_breadth2_depth6");*/
+			databases.Add("v2_scm_al_breadth2_depth8");
+			/*databases.Add("v2_scm_al_breadth2_depth10");
+			databases.Add("v2_scm_al_breadth2_depth12");
+			databases.Add("v2_scm_al_breadth2_depth14");*/
 		}
-
 
 		private void AddQueries()
 		{
-			queries.Add("SELECT * FROM product");
+			string path = @"../../../Queries/SQL/Adjacency List/";
+			foreach(string file in Directory.EnumerateFiles(path, "*.sql"))
+			{
+				Logger.Debug("Reading file " + file + "..");
+				string output = "";
+				string[] lines = File.ReadAllLines(path + file);
+				foreach(string line in lines)
+				{
+					output += line + " ";
+				}
+				output = Regex.Replace(output, @"\s+", " ");
+				Logger.Debug(output);
+				queries.Add(output);
+				Logger.Debug("Closing file " + file + "..");
+			}
 		}
 
 		private void CaptureDatabaseSize(string database)
@@ -64,12 +80,14 @@ namespace DummyDataGenerator.Evaluators
 			output += database + " (" + size + " MB) ";
 		}
 
-		private void ConfigurePerformanceSchema(string database)
+		private void EnablePerformanceSchema(string database)
 		{
+			Logger.Debug("Enabling performance schema");
 			string statement = string.Format(
 				@"USE {0};
+				SET SQL_SAFE_UPDATES = 0;
 				UPDATE performance_schema.setup_actors SET ENABLED = 'NO', HISTORY = 'NO' WHERE HOST = '%' AND USER = '%';
-				INSERT IGNORE INTO performance_schema.setup_actors(HOST,USER,ROLE,ENABLED,HISTORY) VALUES('%', '{1}', '%', 'YES', 'YES');
+				INSERT INTO performance_schema.setup_actors(HOST,USER,ROLE,ENABLED,HISTORY) VALUES('%', '{1}', '%', 'YES', 'YES');
 				UPDATE performance_schema.setup_instruments SET ENABLED = 'YES', TIMED = 'YES' WHERE NAME LIKE '%statement/%';
 				UPDATE performance_schema.setup_instruments SET ENABLED = 'YES', TIMED = 'YES' WHERE NAME LIKE '%stage/%'; 
 				UPDATE performance_schema.setup_consumers SET ENABLED = 'YES' WHERE NAME LIKE '%events_statements_%'; 
@@ -100,15 +118,20 @@ namespace DummyDataGenerator.Evaluators
 			List<int> eventIds = new List<int>();
 			float totaExecutionTime = 0.0f;
 
-			string statement = string.Format("SELECT EVENT_ID, TRUNCATE(TIMER_WAIT/1000000000000,6) as Duration, SQL_TEXT FROM performance_schema.events_statements_history_long WHERE SQL_TEXT LIKE '%{0}%'", query);
-			MySqlCommand command = new MySqlCommand(statement, connector.Connection);
-			MySqlDataReader reader = command.ExecuteReader();
+			MySqlCommand com = new MySqlCommand();
+			com.CommandText = string.Format("SELECT EVENT_ID, TRUNCATE(TIMER_WAIT/1000000000000,6) as Duration, SQL_TEXT FROM performance_schema.events_statements_history_long WHERE SQL_TEXT LIKE '%{0}%'", "q" + queryNumber);
+			com.Connection = connector.Connection;
+			//com.Prepare();
+			//com.Parameters.AddWithValue("@query", query);
+			MySqlDataReader reader = com.ExecuteReader();
+			Console.WriteLine(com.CommandText);
 			try
 			{
 				while (reader.Read())
 				{
 					int id = reader.GetInt16(0);
 					float responseTime = reader.GetFloat(1);
+					Console.WriteLine("Response time for query " + queryNumber + " is " + responseTime);
 					eventIds.Add(id);
 					totaExecutionTime += responseTime;
 					output += ";" + responseTime;
@@ -153,20 +176,35 @@ namespace DummyDataGenerator.Evaluators
 		private void OpenConnection()
 		{
 			connector = MySqlConnector.Instance();
+
 		}
 
 		private void CloseConnection()
 		{
-			// remove performance profiler for the user
-			/*string statement = string.Format("UPDATE performance_schema.setup_actors SET ENABLED = 'NO', HISTORY = 'NO' WHERE HOST = '%' AND USER = '{0}';", Env.GetString("MYSQL_USER"));
-			MySqlCommand command = new MySqlCommand(statement, connector.Connection);
-			command.ExecuteNonQuery();*/
-			// then close the connection
+			Logger.Info("Closing connection..");
 			connector.Close();
+		}
+
+		private void DisablePerformanceSchema(string database)
+		{
+			Logger.Debug("Disabling performance schema");
+			string statement = string.Format(
+				@"USE {0};
+				SET SQL_SAFE_UPDATES = 0;
+				DELETE FROM performance_schema.setup_actors WHERE ENABLED = 'YES' AND HISTORY = 'YES' AND HOST = '%' AND USER = '{1}' AND ROLE = '%';
+				UPDATE performance_schema.setup_instruments SET ENABLED = 'NO', TIMED = 'NO' WHERE NAME LIKE '%statement/%';
+				UPDATE performance_schema.setup_instruments SET ENABLED = 'NO', TIMED = 'NO' WHERE NAME LIKE '%stage/%'; 
+				UPDATE performance_schema.setup_consumers SET ENABLED = 'NO' WHERE NAME LIKE '%events_statements_%'; 
+				UPDATE performance_schema.setup_consumers SET ENABLED = 'NO' WHERE NAME LIKE '%events_stages_%';
+				TRUNCATE performance_schema.events_statements_history_long",
+				database, Env.GetString("MYSQL_USER"));
+			MySqlCommand command = new MySqlCommand(statement, connector.Connection);
+			command.ExecuteNonQuery();
 		}
 
 		private void AddHeadersToOutput()
 		{
+			Logger.Debug("Adding headers to file..");
 			output += "database (size) and query number";
 			for (int i = 0; i < NUMBER_OF_REPETITIONS; i++)
 			{
@@ -177,12 +215,19 @@ namespace DummyDataGenerator.Evaluators
 
 		private void WriteOutputToFile(string fileName)
 		{
-			string path = @"../../../../" + fileName + ".csv";
-			using (FileStream fs = File.Create(path))
+			Logger.Debug("Writing output to file..");
+			try
 			{
-				// adds the keys to the file
-				Byte[] info = new UTF8Encoding(true).GetBytes(output);
-				fs.Write(info, 0, info.Length);
+				string path = @"../../../../" + fileName;
+				using (FileStream fs = File.Create(path))
+				{
+					// adds the keys to the file
+					Byte[] info = new UTF8Encoding(true).GetBytes(output);
+					fs.Write(info, 0, info.Length);
+				}
+			} catch (Exception e)
+			{
+				Logger.Error("Error: " + e);
 			}
 		}
 

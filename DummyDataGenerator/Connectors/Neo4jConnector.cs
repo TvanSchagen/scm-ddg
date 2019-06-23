@@ -1,4 +1,5 @@
 ﻿using DotNetEnv;
+using DummyDataGenerator.Utils;
 using Neo4j.Driver.V1;
 using System;
 using System.Collections.Generic;
@@ -34,7 +35,7 @@ namespace DummyDataGenerator.Connectors
 						Env.GetString("NEO4J_USER"), 
 						Env.GetString("NEO4J_PW"))
 					);
-				Console.WriteLine("\nOpened Neo4j connection");
+				Logger.Info("Created connection to Neo4j @ " + Env.GetString("NEO4J_HOST"));
 			}
 			catch (Neo4jException e)
 			{
@@ -45,7 +46,16 @@ namespace DummyDataGenerator.Connectors
 
 		public void Close()
 		{
-			driver?.Dispose();
+			try
+			{
+				driver?.Dispose();
+				Logger.Info("Closed connection to Neo4j @ " + Env.GetString("NEO4J_HOST"));
+			}
+			catch (Neo4jException e)
+			{
+				Logger.Error(e.ToString());
+			}
+			
 		}
 
 	}

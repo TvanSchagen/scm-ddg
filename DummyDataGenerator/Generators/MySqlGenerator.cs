@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using DummyDataGenerator.Connectors;
+using DummyDataGenerator.Utils;
 using MySql.Data.MySqlClient;
 
 namespace DummyDataGenerator
@@ -42,7 +43,6 @@ namespace DummyDataGenerator
 			GenerateProductTrees(tlOrgs, config.NumberOfProducts, config.ChainDepth, config.ChainBreadth);
 			AddOrganizationsAndActivitiesToProductTree(config.NumberOfSuppliers, config.NumberOfTopLevelSuppliers, config.NumberOfActivities, config.ChainDepth, config.ChainBreadth);
 			AddMetaData(config);
-			Console.WriteLine("Program completed.");
 		}
 
 		/// <summary>
@@ -54,19 +54,19 @@ namespace DummyDataGenerator
 			MySqlScript script = new MySqlScript(connector.Connection, File.ReadAllText("../../../mysql_generate_schema.sql"));
 			try
 			{
-				Console.WriteLine("Executing refresh schema script..");
+				Logger.Debug("Executing refresh schema script..");
 				script.Execute();
 			}
 			catch (MySqlException e)
 			{
-				Console.WriteLine("An error ocurred executing the refresh schema script: " + e);
+				Logger.Error("An error ocurred executing the refresh schema script: " + e);
 			}
 			finally
 			{
 				watch.Stop();
 				
 			}
-			Console.WriteLine("Refreshed schema in " + watch.ElapsedMilliseconds + "ms " + "(" + (watch.ElapsedMilliseconds / 1000) + "s) ");
+			Logger.Info("Refreshed schema in " + watch.ElapsedMilliseconds + "ms " + "(" + (watch.ElapsedMilliseconds / 1000) + "s) ");
 
 			// set autocommit to off
 			string statement = "START TRANSACTION;";
@@ -86,19 +86,11 @@ namespace DummyDataGenerator
 			for (int i = 0; i < organizations; i++)
 			{
 				MySqlCommand com = InsertOrganization(true, i);
-				
-				try
-				{
-					com.ExecuteNonQuery();
-				}
-				catch (MySqlException e)
-				{
-					Console.WriteLine(e);
-				}
+				com.ExecuteNonQuery();
 				result.Add((int)com.LastInsertedId);
 			}
 			watch.Stop();
-			Console.WriteLine("Took " + watch.ElapsedMilliseconds + "ms " + "(" + (watch.ElapsedMilliseconds / 1000) + "s) " + " to generate " + result.Count + " top level organisations");
+			Logger.Info("Took " + watch.ElapsedMilliseconds + "ms " + "(" + (watch.ElapsedMilliseconds / 1000) + "s) " + " to generate " + result.Count + " top level organisations");
 			return result.ToArray();
 		}
 
@@ -118,7 +110,7 @@ namespace DummyDataGenerator
 				result.Add((int)com.LastInsertedId);
 			}
 			watch.Stop();
-			Console.WriteLine("Took " + watch.ElapsedMilliseconds + "ms " + "(" + (watch.ElapsedMilliseconds / 1000) + "s) " + " to generate " + result.Count + " organisations");
+			Logger.Info("Took " + watch.ElapsedMilliseconds + "ms " + "(" + (watch.ElapsedMilliseconds / 1000) + "s) " + " to generate " + result.Count + " organisations");
 			return result.ToArray();
 		}
 
@@ -138,7 +130,7 @@ namespace DummyDataGenerator
 				result.Add((int)com.LastInsertedId);
 			}
 			watch.Stop();
-			Console.WriteLine("Took " + watch.ElapsedMilliseconds + "ms " + "(" + (watch.ElapsedMilliseconds / 1000) + "s) " + " to generate " + result.Count + " activities");
+			Logger.Info("Took " + watch.ElapsedMilliseconds + "ms " + "(" + (watch.ElapsedMilliseconds / 1000) + "s) " + " to generate " + result.Count + " activities");
 			return result.ToArray();
 		}
 
@@ -158,7 +150,7 @@ namespace DummyDataGenerator
 				result.Add((int) com.LastInsertedId);
 			}
 			watch.Stop();
-			Console.WriteLine("Took " + watch.ElapsedMilliseconds + "ms " + "(" + (watch.ElapsedMilliseconds / 1000) + "s) " + " to generate " + result.Count + " locations");
+			Logger.Info("Took " + watch.ElapsedMilliseconds + "ms " + "(" + (watch.ElapsedMilliseconds / 1000) + "s) " + " to generate " + result.Count + " locations");
 			return result.ToArray();
 		}
 
@@ -175,7 +167,7 @@ namespace DummyDataGenerator
 			// for each top level supplier
 			for (int i = 0; i < organizationIdentifiers.Length; i++)
 			{
-				Console.WriteLine("Generating for Organization: " + (i + 1));
+				Logger.Info("Generating for Organization: " + (i + 1));
 
 				// for each of their products
 				for (int j = 0; j < productsPerSupplier; j++)
@@ -191,7 +183,6 @@ namespace DummyDataGenerator
 
 					// generate supplies relation
 					string statement = "INSERT INTO supplies(organization_id, product_id, activity_id, location_id) VALUES(" + organizationIdentifiers[i] + ", " + topLevelId + ", " + (i+1) + ", " + (i+1) +")";
-					Console.WriteLine(statement);
 					MySqlCommand com2 = new MySqlCommand(statement, connector.Connection);
 					com2.ExecuteNonQuery();
 
@@ -214,12 +205,12 @@ namespace DummyDataGenerator
 
 					}
 					watch.Stop();
-					Console.WriteLine("Took " + watch.ElapsedMilliseconds + "ms " + "(" + (watch.ElapsedMilliseconds / 1000) + "s) " +
+					Logger.Info("Took " + watch.ElapsedMilliseconds + "ms " + "(" + (watch.ElapsedMilliseconds / 1000) + "s) " +
 						"to generate products and relations for product " + (j + 1) + " for organisation " + (i + 1));
 				}
 			}
 			watchTotal.Stop();
-			Console.WriteLine("Took " + watchTotal.ElapsedMilliseconds + "ms " + "(" + (watchTotal.ElapsedMilliseconds / 1000) + "s) in total");
+			Logger.Info("Took " + watchTotal.ElapsedMilliseconds + "ms " + "(" + (watchTotal.ElapsedMilliseconds / 1000) + "s) in total");
 		}
 
 		/// <summary>
@@ -276,7 +267,7 @@ namespace DummyDataGenerator
 			{
 				// if the count isn't returned properly, we calculate what the count should theoretically be
 				count = numberOfTopLevelOrganizations * numberOfOrganizations * ((chainBreadth ^ chainDepth) - 1);
-				Console.WriteLine("Could not return count, using default: " + count);
+				Logger.Warn("Could not return count, using default: " + count);
 			}
 
 			for (int i = 0; i < count; i++)
@@ -285,7 +276,7 @@ namespace DummyDataGenerator
 				double skip = Math.Pow(chainBreadth, chainDepth + 1) - 1;
 				if (i % skip == 0)
 				{
-					Console.WriteLine("Skipping product: " + (i + 1));
+					Logger.Debug("Skipping product: " + (i + 1));
 				}
 				else
 				{
@@ -305,7 +296,7 @@ namespace DummyDataGenerator
 			}
 
 			watch.Stop();
-			Console.WriteLine("Took " + watch.ElapsedMilliseconds + "ms " + "(" + (watch.ElapsedMilliseconds / 1000) + "s) to add organizations and activities to the product tree");
+			Logger.Info("Took " + watch.ElapsedMilliseconds + "ms " + "(" + (watch.ElapsedMilliseconds / 1000) + "s) to add organizations and activities to the product tree");
 		}
 
 		protected void AddLocations()
@@ -340,7 +331,7 @@ namespace DummyDataGenerator
 			);
 			MySqlCommand com2 = new MySqlCommand(statement2, connector.Connection);
 			com2.ExecuteNonQuery();
-			Console.WriteLine("Added metadata to the database");
+			Logger.Debug("Added metadata to the database");
 
 			// commit changes
 			string statement3 = "COMMIT;";

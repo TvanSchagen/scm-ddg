@@ -4,6 +4,7 @@ using System.Text;
 using MySql.Data;
 using MySql.Data.MySqlClient;
 using DotNetEnv;
+using DummyDataGenerator.Utils;
 
 namespace DummyDataGenerator.Connectors
 {
@@ -40,15 +41,16 @@ namespace DummyDataGenerator.Connectors
 				{
 					conn = new MySqlConnection(connstring);
 					conn.Open();
-					Console.WriteLine("Opened MySql connection with status: " + conn.State.ToString());
+					Logger.Info("Created connection to MySQL @ " + Env.GetString("MYSQL_HOST"));
 				}
 				catch (MySqlException e)
 				{
-					Console.WriteLine(e);
+					Logger.Error(e.ToString());
 				}
 			}
 		}
 
+		[Obsolete("Currently does not work as intended, do not use")]
 		public MySqlConnection NewConnection()
 		{
 			MySqlConnection c = null;
@@ -63,7 +65,7 @@ namespace DummyDataGenerator.Connectors
 			{
 				c = new MySqlConnection(connstring);
 				c.Open();
-				Console.WriteLine("Opened New MySql connection with status: " + conn.State.ToString());
+				Logger.Info("Created connection to MySQL @ " + Env.GetString("MYSQL_HOST"));
 			}
 			catch (MySqlException e)
 			{
@@ -74,7 +76,16 @@ namespace DummyDataGenerator.Connectors
 
 		public void Close()
 		{
-			conn?.Close();
+			try
+			{
+				conn?.Close();
+				Logger.Info("Closed connection to MySQL @ " + Env.GetString("MYSQL_HOST"));
+			}
+			catch (MySqlException e)
+			{
+				Logger.Error(e.ToString());
+			}
+			
 		}
 	}
 }
