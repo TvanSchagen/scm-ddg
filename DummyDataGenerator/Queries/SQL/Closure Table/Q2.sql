@@ -1,3 +1,5 @@
+-- modify this such that it can return an actual hierarchy, not just the list of products
+
 SELECT p.id, p.name
 FROM product AS p
 JOIN consists_of AS c ON p.id = c.child_product_id
