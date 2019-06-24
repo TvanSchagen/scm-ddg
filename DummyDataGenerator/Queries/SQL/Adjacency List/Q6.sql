@@ -17,7 +17,7 @@ AS
     WHERE parent.category = "Baby"
     AND parent.created > "2017-01-01 00:00:00"
     AND parent_org.number_of_employees > 1000
-    AND child_loc.country IN ("Turkey", "Honduras", "Malawi")
+    AND parent_loc.country IN ("Guam", "Georgia", "Dominica")
     
 	UNION ALL
 
@@ -35,5 +35,5 @@ AS
     WHERE depth < 4
 )
 
-SELECT q6, parent_pname, parent_oname, parent_country, child_ean, child_pname, child_oname, child_country, depth
+SELECT q6, parent_pname, parent_oname, parent_country, child_ean, child_pname, child_oname, child_country
 FROM cte

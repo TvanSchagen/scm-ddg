@@ -15,4 +15,4 @@ WHERE c.parent_product_id IN (
 	AND o2.number_of_employees > 1000
 	AND l2.country IN ("Guam", "Georgia", "Dominica")
 )
--- AND c.path_length < 4
+AND c.path_length < 4
