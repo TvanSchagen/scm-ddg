@@ -293,11 +293,11 @@ namespace DummyDataGenerator.Generators
 						MySqlDataReader reader = cmd.ExecuteReader();
 						while (reader.Read())
 						{
-							int ppid = reader.GetInt16(0);
-							Console.WriteLine("ppid " + ppid);
+							int ppid = reader.GetInt32(0);
+							//Console.WriteLine("ppid " + ppid);
 							ids.Add(ppid);
-							int pl = reader.GetInt16(1);
-							Console.WriteLine("pl " + pl);
+							int pl = reader.GetInt32(1);
+							//Console.WriteLine("pl " + pl);
 							pathlengths.Add(pl);
 						}
 						reader.Close();
