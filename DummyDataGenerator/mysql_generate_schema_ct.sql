@@ -46,6 +46,7 @@ CREATE TABLE `consists_of` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `parent_product_id` int(11) NOT NULL,
   `child_product_id` int(11) NOT NULL,
+  `path_length` int(11) NUll,
   PRIMARY KEY (`id`),
   KEY `fk_parent_product_id_idx` (`parent_product_id`),
   KEY `fk_child_product_id_idx` (`child_product_id`),

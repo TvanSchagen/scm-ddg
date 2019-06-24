@@ -1,6 +1,8 @@
-﻿using MySql.Data.MySqlClient;
+﻿using DummyDataGenerator.Utils;
+using MySql.Data.MySqlClient;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading;
 
@@ -31,6 +33,32 @@ namespace DummyDataGenerator.Generators
 			AddOrganizationsAndActivitiesToProductTree(config.NumberOfSuppliers, config.NumberOfTopLevelSuppliers, config.NumberOfActivities, config.ChainDepth, config.ChainBreadth);
 			AddMetaData(config);
 			Console.WriteLine("Program done, press enter to continue");
+		}
+
+		private void RefreshDatabaseSchema()
+		{
+			var watch = System.Diagnostics.Stopwatch.StartNew();
+			MySqlScript script = new MySqlScript(connector.Connection, File.ReadAllText("../../../mysql_generate_schema_ct.sql"));
+			try
+			{
+				Logger.Debug("Executing refresh schema script..");
+				script.Execute();
+			}
+			catch (MySqlException e)
+			{
+				Logger.Error("An error ocurred executing the refresh schema script: " + e);
+			}
+			finally
+			{
+				watch.Stop();
+
+			}
+			Logger.Info("Refreshed schema in " + watch.ElapsedMilliseconds + "ms " + "(" + (watch.ElapsedMilliseconds / 1000) + "s) ");
+
+			// set autocommit to off
+			string statement = "START TRANSACTION;";
+			MySqlCommand com = new MySqlCommand(statement, connector.Connection);
+			com.ExecuteNonQuery();
 		}
 
 		struct ProductTreeData
@@ -128,14 +156,14 @@ namespace DummyDataGenerator.Generators
 					previousResults.Add(topLevelId);
 					// also add the top level id to all results (because it isn't returned as childs when generating the product row and relations)
 					allResults.Add(topLevelId);
-					previousResults = GenerateProductRowAndRelations(null, previousResults, d.breadthPerLevel, c);
+					previousResults = GenerateProductRowAndRelations(null, previousResults, d.breadthPerLevel, c, d.depth);
 					allResults.AddRange(previousResults);
 
 				}
 				// in subsequent passes, take the previous row of products and generate a new underlying row for all of them
 				else
 				{
-					previousResults = GenerateProductRowAndRelations(allResults, previousResults, d.breadthPerLevel, c);
+					previousResults = GenerateProductRowAndRelations(allResults, previousResults, d.breadthPerLevel, c, d.depth);
 					allResults.AddRange(previousResults);
 				}
 
@@ -178,7 +206,7 @@ namespace DummyDataGenerator.Generators
 					com2.ExecuteNonQuery();
 
 					// add it to the hierarchy
-					string statement2 = string.Format("INSERT INTO consists_of(parent_product_id, child_product_id) VALUES({0}, {0})", topLevelId);
+					string statement2 = string.Format("INSERT INTO consists_of(parent_product_id, child_product_id, path_length) VALUES({0}, {0}, 0)", topLevelId);
 					MySqlCommand com3 = new MySqlCommand(statement2, connector.Connection);
 					com3.ExecuteNonQuery();
 
@@ -197,14 +225,14 @@ namespace DummyDataGenerator.Generators
 							previousResults.Add(topLevelId);
 							// also add the top level id to all results (because it isn't returned as childs when generating the product row and relations)
 							allResults.Add(topLevelId);
-							previousResults = GenerateProductRowAndRelations(null, previousResults, breadthPerLevel, connector.Connection, depth);
+							previousResults = GenerateProductRowAndRelations(null, previousResults, breadthPerLevel, connector.Connection, k);
 							allResults.AddRange(previousResults);
 
 						}
 						// in subsequent passes, take the previous row of products and generate a new underlying row for all of them
 						else
 						{
-							previousResults = GenerateProductRowAndRelations(allResults, previousResults, breadthPerLevel, connector.Connection, depth);
+							previousResults = GenerateProductRowAndRelations(allResults, previousResults, breadthPerLevel, connector.Connection, k);
 							allResults.AddRange(previousResults);
 						}
 
@@ -245,32 +273,52 @@ namespace DummyDataGenerator.Generators
 					childProductsCreated.Add(childProductId);
 					
 					// then for the tree structure, add a reference to itself
-					string statement2 = "INSERT INTO consists_of(parent_product_id, child_product_id) VALUES(" + childProductId + "," + childProductId + "); ";
+					string statement2 = "INSERT INTO consists_of(parent_product_id, child_product_id, path_length) VALUES(" + childProductId + "," + childProductId + ", + 0); ";
 					MySqlCommand com2 = new MySqlCommand(statement2, c);
 					com2.ExecuteNonQuery();
 					
 					// then add a row for the reference to the immediate parent
-					string statement3 = "INSERT INTO consists_of(parent_product_id, child_product_id) VALUES(" + immediateParentProductIdentifiers[i] + "," + childProductId + ");";
-					Console.WriteLine("Depth: " + depth);
+					string statement3 = "INSERT INTO consists_of(parent_product_id, child_product_id, path_length) VALUES(" + immediateParentProductIdentifiers[i] + "," + childProductId + ", " + 1 + ");";
 					MySqlCommand com3 = new MySqlCommand(statement3, c);
 					com3.ExecuteNonQuery();
 
 					List<int> productIds = new List<int>();
 					if (allParentProductIdentifiers != null)
 					{
+						// first, retrieve the parent products and their path lengths
+						List<int> ids = new List<int>();
+						List<int> pathlengths = new List<int>();
+						string stmt = string.Format("WITH RECURSIVE cte ( ppid, cpid, pl ) AS ( SELECT parent.id, child.id, path_length FROM consists_of JOIN product AS parent ON consists_of.parent_product_id = parent.id JOIN product AS child ON consists_of.child_product_id = child.id WHERE child.id = {0} UNION ALL SELECT parent.id, child.id, path_length FROM consists_of JOIN product AS parent ON consists_of.parent_product_id = parent.id JOIN product AS child ON consists_of.child_product_id = child.id JOIN cte ON cte.ppid = child.id WHERE consists_of.child_product_id <> consists_of.parent_product_id ) SELECT ppid, MAX(pl) AS pl FROM cte GROUP BY ppid ORDER BY ppid DESC", childProductId);
+						MySqlCommand cmd = new MySqlCommand(stmt, connector.Connection);
+						MySqlDataReader reader = cmd.ExecuteReader();
+						while (reader.Read())
+						{
+							int ppid = reader.GetInt16(0);
+							Console.WriteLine("ppid " + ppid);
+							ids.Add(ppid);
+							int pl = reader.GetInt16(1);
+							Console.WriteLine("pl " + pl);
+							pathlengths.Add(pl);
+						}
+						reader.Close();
+
 						// select all of our parent products for the created child product
-						string statement4 = string.Format("WITH RECURSIVE cte ( ppid, cpid ) AS ( SELECT parent.id, child.id FROM consists_of JOIN product AS parent ON consists_of.parent_product_id = parent.id JOIN product AS child ON consists_of.child_product_id = child.id WHERE child.id = {0} UNION ALL SELECT parent.id, child.id FROM consists_of JOIN product AS parent ON consists_of.parent_product_id = parent.id JOIN product AS child ON consists_of.child_product_id = child.id JOIN cte ON cte.ppid = child.id WHERE consists_of.child_product_id <> consists_of.parent_product_id ) SELECT GROUP_CONCAT(DISTINCT ppid ORDER BY ppid DESC SEPARATOR ',') AS ids FROM cte ", childProductId);
+						/*string statement4 = string.Format("WITH RECURSIVE cte ( ppid, cpid, pl ) AS ( SELECT parent.id, child.id, path_length FROM consists_of JOIN product AS parent ON consists_of.parent_product_id = parent.id JOIN product AS child ON consists_of.child_product_id = child.id WHERE child.id = {0} UNION ALL SELECT parent.id, child.id, path_length FROM consists_of JOIN product AS parent ON consists_of.parent_product_id = parent.id JOIN product AS child ON consists_of.child_product_id = child.id JOIN cte ON cte.ppid = child.id WHERE consists_of.child_product_id <> consists_of.parent_product_id ) SELECT GROUP_CONCAT(DISTINCT concat(ppid, '; ', pl) ORDER BY ppid DESC SEPARATOR ',') AS ids FROM cte", childProductId);
 						MySqlCommand com4 = new MySqlCommand(statement4, c);
 						string list = (string) com4.ExecuteScalar();
-						productIds = list.Split(',').Select(Int32.Parse).ToList();
-						// Console.WriteLine("Parent Product Ids: " + list + " for child " + childProductId);
+						List<string> result = list.Split(',').ToList();
+						foreach (string r in result)
+						{
+							ids.Add(Int32.Parse(r.Split(";").ToArray()[0]));
+							pathlengths.Add(Int32.Parse(r.Split(";").ToArray()[1]));
+						}*/
 
 						// skip the first two id's, because they the first one is referencing themselves, and the second one was already inserted before (initial parent > child relation)
-						for (int k = 2; k < productIds.Count; k++)
+						for (int k = 2; k < ids.Count; k++)
 						{
 							// inserto into hierarchy
-							string statement5 = string.Format("INSERT INTO consists_of(parent_product_id, child_product_id) VALUES(" + productIds[k] + "," + childProductId + ");");
-							Console.WriteLine("Depth: " + k);
+							string statement5 = string.Format("INSERT INTO consists_of(parent_product_id, child_product_id, path_length) VALUES(" + ids[k] + "," + childProductId + ", " + (pathlengths[k] + 1) +");");
+							//Console.WriteLine("Depth: " + k);
 							// Console.WriteLine("Inserting: " + productIds[k]);
 							MySqlCommand com5 = new MySqlCommand(statement5, c);
 							com5.ExecuteNonQuery();
