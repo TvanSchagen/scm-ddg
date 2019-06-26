@@ -294,10 +294,8 @@ namespace DummyDataGenerator.Generators
 						while (reader.Read())
 						{
 							int ppid = reader.GetInt16(0);
-							Console.WriteLine("ppid " + ppid);
 							ids.Add(ppid);
 							int pl = reader.GetInt16(1);
-							Console.WriteLine("pl " + pl);
 							pathlengths.Add(pl);
 						}
 						reader.Close();

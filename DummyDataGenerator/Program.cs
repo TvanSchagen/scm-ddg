@@ -41,7 +41,7 @@ namespace DummyDataGenerator
 				}
 				System.Environment.Exit(0);
 			}
-			Logger.Info("Choose your application mode: [G]enerate data / [E]valuate database");
+			Logger.Info(false, "Choose your application mode: [G]enerate data / [E]valuate database >> ");
 			ChooseMode(Console.ReadKey().Key);
 		}
 
@@ -55,7 +55,7 @@ namespace DummyDataGenerator
 			if (input == ConsoleKey.E)
 			{
 				Console.WriteLine();
-				Logger.Info("Choose your database to evaluate: ([N]eo4j / [A]djacency List MySQL / [C]losure Table MySQL)");
+				Logger.Info(false, "Choose your database to evaluate: ([N]eo4j / [A]djacency List MySQL / [C]losure Table MySQL) >> ");
 				ChooseEvaluator(Console.ReadKey().Key);
 			}
 			// G for generating mode
@@ -63,18 +63,24 @@ namespace DummyDataGenerator
 			{
 				Console.WriteLine();
 				// get user input for data generation parameters
-				Logger.Info("Enter parameters (leave blank for default):");
 				Configuration conf = new Configuration(
-					ReadInt("Chain depth: ", DEFAULT_CHAIN_DEPTH),
-					ReadInt("Chain breadth: ", DEFAULT_CHAIN_BREADTH),
-					ReadInt("Number of activities: ", DEFAULT_NO_OF_ACTIVITIES),
-					ReadInt("Number of organizations: ", DEFAULT_NO_OF_SUPPLIERS),
-					ReadInt("Number of top level organizations: ", DEFAULT_NO_OF_TOPLEVELSUPPLIERS),
-					ReadInt("Products per top level organization: ", DEFAULT_NO_OF_PRODUCTS)
+					ReadInt("Enter Chain depth:\t\t\t", DEFAULT_CHAIN_DEPTH),
+					ReadInt("Enter Chain breadth\t\t\t", DEFAULT_CHAIN_BREADTH),
+					ReadInt("Enter Number of activities\t\t", DEFAULT_NO_OF_ACTIVITIES),
+					ReadInt("Enter Number of organizations\t\t", DEFAULT_NO_OF_SUPPLIERS),
+					ReadInt("Enter Number of top level organizations\t", DEFAULT_NO_OF_TOPLEVELSUPPLIERS),
+					ReadInt("Enter Products per top level organization\t", DEFAULT_NO_OF_PRODUCTS)
 				);
-				Logger.Info("Allow multiple threads to be used: ([Y]es/[N]o)");
-				ConsoleKey allow = Console.ReadKey().Key;
-				Logger.Info("Choose your database to use for generation: ([N]eo4j / [A]djacency List MySQL / [C]losure Table MySQL)");
+				Logger.Info(false, "Allow multiple threads to be used: ([Y]es/[N]o) >> ");
+				ConsoleKeyInfo k = Console.ReadKey();
+				bool allow = k.Key == ConsoleKey.Y;
+				if (!allow && k.Key != ConsoleKey.N)
+				{
+					Console.WriteLine();
+					Logger.Warn("Using default [don't allow]");
+				}
+
+				Logger.Info(false, "Choose your database to use for generation: ([N]eo4j / [A]djacency List MySQL / [C]losure Table MySQL) >> ");
 				ChooseGenerator(conf, allow, Console.ReadKey().Key);
 			} else
 			{
@@ -117,7 +123,7 @@ namespace DummyDataGenerator
 		/// </summary>
 		/// <param name="conf">The associated configuration for the data generation</param>
 		/// <param name="input">The key-input with which the user chooses their database</param>
-		private static void ChooseGenerator(Configuration conf, ConsoleKey allowMultipleThreads, ConsoleKey input)
+		private static void ChooseGenerator(Configuration conf, bool allowMultipleThreads, ConsoleKey input)
 		{
 			Database database;
 			if (input == ConsoleKey.A)
@@ -134,17 +140,17 @@ namespace DummyDataGenerator
 			}
 			else
 			{
+				Console.WriteLine();
 				Logger.Warn("Unsupported Input, please try again");
 				ChooseGenerator(conf, allowMultipleThreads, Console.ReadKey().Key);
 				return;
 			}
-			Logger.Info("Initializing connection..");
+			Logger.Info("\nInitializing connection..");
 			database.InitializeConnection();
 			Logger.Info("Preparing dummy data..");
 			database.GenerateFakeData(10000);
-			bool allow = allowMultipleThreads == ConsoleKey.Y;
 			Logger.Info("Starting data generation process..");
-			database.GenerateData(conf, allow);
+			database.GenerateData(conf, allowMultipleThreads);
 			Logger.Info("Closing connection..");
 			database.CloseConnection();
 			Console.ReadLine();
@@ -158,10 +164,11 @@ namespace DummyDataGenerator
 		/// <returns></returns>
 		private static int ReadInt(string message, int defaultInput)
 		{
-			Console.WriteLine(message);
+			Logger.Info(false, message + " >> ");
 			int result;
 			if (!Int32.TryParse(Console.ReadLine(), out result) || result < 0)
 			{
+				Logger.Warn("Using default [" + defaultInput + "]");
 				return defaultInput;
 			}
 			return result;

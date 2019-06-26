@@ -54,7 +54,7 @@ namespace DummyDataGenerator.Evaluators
 		private void ExecuteQueryAndRetrieveResult(int iteration, string query, string database)
 		{
 			Logger.Info("Executing and retrieving results for query: " + (iteration + 1));
-			output += database + " query " + (iteration + 1);
+			output += database + "query " + (iteration + 1);
 			List<int> eventIds = new List<int>();
 			int totaExecutionTime = 0;
 			for (int i = 0; i < NUMBER_OF_REPETITIONS; i++)
@@ -62,12 +62,13 @@ namespace DummyDataGenerator.Evaluators
 				using (ISession session = connector.Connection.Session())
 				{
 					IStatementResult res = session.WriteTransaction(tx => tx.Run(query));
-					int responseTime = res.Summary.ResultConsumedAfter.Milliseconds;
-					Logger.Debug("Available after: " + res.Summary.ResultAvailableAfter.Milliseconds + " Consumed after: " + responseTime);
+					int responseTime = res.Summary.ResultAvailableAfter.Milliseconds + res.Summary.ResultConsumedAfter.Milliseconds;
+					Logger.Debug("Available after: " + res.Summary.ResultAvailableAfter.Milliseconds + " Consumed after: " + res.Summary.ResultConsumedAfter.Milliseconds);
 					totaExecutionTime += responseTime;
 					output += ";" + responseTime;
 				}
 			}
+			output += "\n";
 			Logger.Info("Average execution time: " + totaExecutionTime / NUMBER_OF_REPETITIONS);
 		}
 
