@@ -22,23 +22,17 @@ namespace DummyDataGenerator.Generators
 			GenerateOrganizations(config.NumberOfSuppliers);
 			GenerateActivities(config.NumberOfActivities);
 			GenerateLocations(config.NumberOfSuppliers);
-			if (allowMultipleThreads)
-			{
-				mt_GenerateProductTrees(tlOrgs, config.NumberOfProducts, config.ChainDepth, config.ChainBreadth);
-			}
-			else
-			{
-				GenerateProductTrees(tlOrgs, config.NumberOfProducts, config.ChainDepth, config.ChainBreadth);
-			}
+			if (allowMultipleThreads) Logger.Warn("Multithread is not supported for this generator");
+			GenerateProductTrees(tlOrgs, config.NumberOfProducts, config.ChainDepth, config.ChainBreadth);
 			AddOrganizationsAndActivitiesToProductTree(config.NumberOfSuppliers, config.NumberOfTopLevelSuppliers, config.NumberOfActivities, config.ChainDepth, config.ChainBreadth);
 			AddMetaData(config);
 			Console.WriteLine("Program done, press enter to continue");
 		}
 
-		private void RefreshDatabaseSchema()
+		private new void RefreshDatabaseSchema()
 		{
 			var watch = System.Diagnostics.Stopwatch.StartNew();
-			MySqlScript script = new MySqlScript(connector.Connection, File.ReadAllText("../../../mysql_generate_schema_ct.sql"));
+			MySqlScript script = new MySqlScript(connector.Connection, File.ReadAllText(Properties.Resources.mysql_generate_schema_ct));
 			try
 			{
 				Logger.Debug("Executing refresh schema script..");
@@ -79,98 +73,6 @@ namespace DummyDataGenerator.Generators
 			public int breadthPerLevel { get; }
 			public int orgIter;
 			public int prodIter;
-		}
-
-		/// <summary>
-		/// 
-		/// </summary>
-		/// <param name="organizationIds"></param>
-		/// <param name="productsPerSupplier"></param>
-		/// <param name="depth"></param>
-		/// <param name="breadthPerLevel"></param>
-		[Obsolete("Currently does not function as it should.")]
-		private void mt_GenerateProductTrees(int[] organizationIds, int productsPerSupplier, int depth, int breadthPerLevel)
-		{
-			List<Thread> threads = new List<Thread>();
-			List<ProductTreeData> data = new List<ProductTreeData>();
-
-			for (int i = 0; i < organizationIds.Length; i++)
-			{
-				for (int j = 0; j < productsPerSupplier; j++)
-				{
-					threads.Add(new Thread(mt_GenerateSingleProductTree));
-					data.Add(new ProductTreeData(organizationIds[i], productsPerSupplier, depth, breadthPerLevel, i, j));
-				}
-			}
-
-			// generate the threads
-			for (int i = 0; i < threads.Count; i++)
-			{
-				threads[i].Start(data[i]);
-			}
-
-			// and wait until they complete, to continue
-			for (int i = 0; i < threads.Count; i++)
-			{
-				threads[i].Join();
-			}
-
-		}
-
-		/// <summary>
-		/// 
-		/// </summary>
-		/// <param name="data"></param>
-		[Obsolete("Currently does not function as it should.")]
-		private void mt_GenerateSingleProductTree(object data)
-		{
-			MySqlConnection c = connector.NewConnection();
-
-			ProductTreeData d = (ProductTreeData)data;
-			Console.WriteLine("Starting new Thread..");
-			var watch = System.Diagnostics.Stopwatch.StartNew();
-
-			// generate the top level product
-			// string statement = "INSERT INTO product(name) VALUES(" + "'Top Level Product #o" + (i + 1) + "-p" + (j + 1) + "');";
-			MySqlCommand com = InsertProduct(true, d.orgIter * d.productsPerSupplier + d.prodIter);
-			com.ExecuteNonQuery();
-			int topLevelId = (int)com.LastInsertedId;
-
-			// add it to the hierarchy
-			string statement2 = string.Format("USE scm_ct_breadth2_depth8; INSERT INTO consists_of(parent_product_id, child_product_id) VALUES({0}, {0})", topLevelId);
-			MySqlCommand com2 = new MySqlCommand(statement2, c);
-			com2.ExecuteNonQuery();
-
-			// this list represents the products in the previous row of the current hierarchy
-			List<int> previousResults = new List<int>();
-			// this list represents all the products in the current hierarchy
-			List<int> allResults = new List<int>();
-
-			// for the depth of the chain
-			for (int k = 0; k < d.depth; k++)
-			{
-				// in the first pass, generate the products for our top level product
-				if (k == 0)
-				{
-					// add the top level id as our previous row
-					previousResults.Add(topLevelId);
-					// also add the top level id to all results (because it isn't returned as childs when generating the product row and relations)
-					allResults.Add(topLevelId);
-					previousResults = GenerateProductRowAndRelations(null, previousResults, d.breadthPerLevel, c, d.depth);
-					allResults.AddRange(previousResults);
-
-				}
-				// in subsequent passes, take the previous row of products and generate a new underlying row for all of them
-				else
-				{
-					previousResults = GenerateProductRowAndRelations(allResults, previousResults, d.breadthPerLevel, c, d.depth);
-					allResults.AddRange(previousResults);
-				}
-
-			}
-			watch.Stop();
-			Console.WriteLine("Took " + watch.ElapsedMilliseconds + "ms " + "(" + (watch.ElapsedMilliseconds / 1000) + "s) " +
-				"to generate products and relations for product " + (d.prodIter + 1) + " for organisation " + (d.orgIter + 1));
 		}
 
 		/// <summary>

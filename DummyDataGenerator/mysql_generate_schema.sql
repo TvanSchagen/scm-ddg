@@ -112,8 +112,8 @@ CREATE TABLE `product` (
   `name` varchar(256) NOT NULL,
   `description` TEXT NULL,
   `ean` char(13) NULL,
-  `category` char(128) NULL,
-  `sub_category` char(128) NULL,
+  `category` varchar(128) NULL,
+  `sub_category` varchar(128) NULL,
   `created` DATETIME NULL,
   `last_updated` DATETIME NULL,
   PRIMARY KEY (`id`)

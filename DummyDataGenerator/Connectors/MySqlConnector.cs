@@ -50,30 +50,6 @@ namespace DummyDataGenerator.Connectors
 			}
 		}
 
-		[Obsolete("Currently does not work as intended, do not use")]
-		public MySqlConnection NewConnection()
-		{
-			MySqlConnection c = null;
-			string connstring = string.Format(
-				"Server={0}; database={1}; UID={2}; password={3}",
-				Env.GetString("MYSQL_HOST"),
-				Env.GetString("MYSQL_DB"),
-				Env.GetString("MYSQL_USER"),
-				Env.GetString("MYSQL_PW")
-			);
-			try
-			{
-				c = new MySqlConnection(connstring);
-				c.Open();
-				Logger.Info("Created connection to MySQL @ " + Env.GetString("MYSQL_HOST"));
-			}
-			catch (MySqlException e)
-			{
-				Console.WriteLine(e);
-			}
-			return c;
-		}
-
 		public void Close()
 		{
 			try

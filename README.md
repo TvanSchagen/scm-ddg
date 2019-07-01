@@ -24,7 +24,7 @@ Database | Type | Support
 --- | --- | ---
 MySQL | Relational | 100%
 Neo4j | Graph |100%
-SQL Server | Relational | 0%
+SQL Server | Relational | 20%
 PostgreSQL | Relational | 0%
 Titan  | Graph | 0%
 OrientDB | Document/Graph | 0%
@@ -32,8 +32,7 @@ MongoDB | Document | 0%
 ... | ... | ...
 
 ### To Do
-- Expand the data models with more properties
-- Add a fake data library to generate more realistic names and properties for entities
 - Add support for other relational databases
 - Add support for other NoSQL databases (key value store, column store, document store)
 - Add more batch insert features to speed up generating the data
+- ...

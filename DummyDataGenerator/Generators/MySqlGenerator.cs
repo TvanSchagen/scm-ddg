@@ -40,6 +40,7 @@ namespace DummyDataGenerator
 			GenerateOrganizations(config.NumberOfSuppliers);
 			GenerateActivities(config.NumberOfActivities);
 			GenerateLocations(config.NumberOfSuppliers);
+			if (allowMultipleThreads) Logger.Warn("Multithread is not supported for this generator");
 			GenerateProductTrees(tlOrgs, config.NumberOfProducts, config.ChainDepth, config.ChainBreadth);
 			AddOrganizationsAndActivitiesToProductTree(config.NumberOfSuppliers, config.NumberOfTopLevelSuppliers, config.NumberOfActivities, config.ChainDepth, config.ChainBreadth);
 			AddMetaData(config);
@@ -51,7 +52,7 @@ namespace DummyDataGenerator
 		protected void RefreshDatabaseSchema()
 		{
 			var watch = System.Diagnostics.Stopwatch.StartNew();
-			MySqlScript script = new MySqlScript(connector.Connection, File.ReadAllText("../../../mysql_generate_schema.sql"));
+			MySqlScript script = new MySqlScript(connector.Connection, File.ReadAllText(Properties.Resources.mysql_generate_schema));
 			try
 			{
 				Logger.Debug("Executing refresh schema script..");

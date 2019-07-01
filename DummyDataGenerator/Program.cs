@@ -80,7 +80,7 @@ namespace DummyDataGenerator
 					Logger.Warn("Using default [don't allow]");
 				}
 
-				Logger.Info(false, "Choose your database to use for generation: ([N]eo4j / [A]djacency List MySQL / [C]losure Table MySQL) >> ");
+				Logger.Info(false, "Choose your database to use for generation: ([N]eo4j / [A]djacency List MySQL / [C]losure Table MySQL / [S]QL Server) >> ");
 				ChooseGenerator(conf, allow, Console.ReadKey().Key);
 			} else
 			{
@@ -137,6 +137,10 @@ namespace DummyDataGenerator
 			else if (input == ConsoleKey.C)
 			{
 				database = new MySqlClosureTableGenerator();
+			}
+			else if (input == ConsoleKey.S)
+			{
+				database = new SqlServerGenerator();
 			}
 			else
 			{
