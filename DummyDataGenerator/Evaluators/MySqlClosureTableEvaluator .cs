@@ -12,17 +12,16 @@ namespace DummyDataGenerator.Evaluators
 {
 	class MySqlClosureTableEvaluator : MySqlEvaluator
 	{
+		// add the databases you want to evaluate here
 		private void AddDatabases()
 		{
-			databases.Add("scm_ct_breadth2_depth2");
-			databases.Add("scm_ct_breadth2_depth4");
-			databases.Add("scm_ct_breadth2_depth6");
-			databases.Add("scm_ct_breadth2_depth8");
-			databases.Add("scm_ct_breadth2_depth10");
-			databases.Add("scm_ct_breadth2_depth12");
-			databases.Add("scm_ct_breadth2_depth14");
+			databases.Add("scm_ct_b2_d10");
 		}
 
+		/// <summary>
+		/// Reads all .sql files from the directory and adds them to the list
+		/// </summary>
+		#warning due to limitations (of query length) of the MySQL performance schema, q<number> must be contained somewhere in the query in order to recognize it as this particular query
 		private void AddQueries()
 		{
 			string path = @"../../../Queries/SQL/Closure Table/";

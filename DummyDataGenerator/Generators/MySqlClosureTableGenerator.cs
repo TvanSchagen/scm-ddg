@@ -3,8 +3,6 @@ using MySql.Data.MySqlClient;
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Threading;
 
 namespace DummyDataGenerator.Generators
 {
@@ -29,6 +27,9 @@ namespace DummyDataGenerator.Generators
 			Console.WriteLine("Program done, press enter to continue");
 		}
 
+		/// <summary>
+		/// Drops and creates the database, as to start off with a clean sheet
+		/// </summary>
 		private new void RefreshDatabaseSchema()
 		{
 			var watch = System.Diagnostics.Stopwatch.StartNew();
@@ -55,33 +56,14 @@ namespace DummyDataGenerator.Generators
 			com.ExecuteNonQuery();
 		}
 
-		struct ProductTreeData
-		{
-			public ProductTreeData(int org, int productsPerSupplier, int depth, int breadthPerLevel, int orgIter, int prodIter)
-			{
-				this.org = org;
-				this.productsPerSupplier = productsPerSupplier;
-				this.depth = depth;
-				this.breadthPerLevel = breadthPerLevel;
-				this.orgIter = orgIter;
-				this.prodIter = prodIter;
-			}
-
-			public int org { get; }
-			public int productsPerSupplier { get; }
-			public int depth { get; }
-			public int breadthPerLevel { get; }
-			public int orgIter;
-			public int prodIter;
-		}
-
 		/// <summary>
-		/// 
+		/// Generates all of the product trees necessary (amount of top level suppliers * amount of products) 
+		/// starts with the top level products, and then proceeds with all branches in the tree
 		/// </summary>
-		/// <param name="organizationIdentifiers"></param>
-		/// <param name="productsPerSupplier"></param>
-		/// <param name="depth"></param>
-		/// <param name="breadthPerLevel"></param>
+		/// <param name="organizationIdentifiers">The id's of the top level organizations</param>
+		/// <param name="productsPerSupplier">The number of products each supplier should get</param>
+		/// <param name="depth">The depth of each chain (in how many branches does each product split up)</param>
+		/// <param name="breadthPerLevel">The breadth of each chain per level; the number of products to generate for the product above</param>
 		private void GenerateProductTrees(int[] organizationIdentifiers, int productsPerSupplier, int depth, int breadthPerLevel)
 		{
 			var watchTotal = System.Diagnostics.Stopwatch.StartNew();
@@ -148,7 +130,6 @@ namespace DummyDataGenerator.Generators
 			Console.WriteLine("Took " + watchTotal.ElapsedMilliseconds + "ms " + "(" + (watchTotal.ElapsedMilliseconds / 1000) + "s)" + "(" + (watchTotal.ElapsedMilliseconds / 1000 / 60) + "m) in total");
 		}
 
-
 		/// <summary>
 		/// Adds a single row to a single product hierarchy
 		/// </summary>
@@ -190,7 +171,18 @@ namespace DummyDataGenerator.Generators
 						// first, retrieve the parent products and their path lengths
 						List<int> ids = new List<int>();
 						List<int> pathlengths = new List<int>();
-						string stmt = string.Format("WITH RECURSIVE cte ( ppid, cpid, pl ) AS ( SELECT parent.id, child.id, path_length FROM consists_of JOIN product AS parent ON consists_of.parent_product_id = parent.id JOIN product AS child ON consists_of.child_product_id = child.id WHERE child.id = {0} UNION ALL SELECT parent.id, child.id, path_length FROM consists_of JOIN product AS parent ON consists_of.parent_product_id = parent.id JOIN product AS child ON consists_of.child_product_id = child.id JOIN cte ON cte.ppid = child.id WHERE consists_of.child_product_id <> consists_of.parent_product_id ) SELECT ppid, MAX(pl) AS pl FROM cte GROUP BY ppid ORDER BY ppid DESC", childProductId);
+						string stmt = string.Format(@"WITH RECURSIVE cte ( ppid, cpid, pl ) AS ( 
+													SELECT parent.id, child.id, path_length FROM consists_of 
+													JOIN product AS parent ON consists_of.parent_product_id = parent.id 
+													JOIN product AS child ON consists_of.child_product_id = child.id 
+													WHERE child.id = {0} 
+													UNION ALL 
+													SELECT parent.id, child.id, path_length FROM consists_of 
+													JOIN product AS parent ON consists_of.parent_product_id = parent.id
+													JOIN product AS child ON consists_of.child_product_id = child.id 
+													JOIN cte ON cte.ppid = child.id WHERE consists_of.child_product_id <> consists_of.parent_product_id ) 
+													SELECT ppid, MAX(pl) AS pl FROM cte GROUP BY ppid ORDER BY ppid DESC"
+											, childProductId);
 						MySqlCommand cmd = new MySqlCommand(stmt, connector.Connection);
 						MySqlDataReader reader = cmd.ExecuteReader();
 						while (reader.Read())
@@ -202,24 +194,11 @@ namespace DummyDataGenerator.Generators
 						}
 						reader.Close();
 
-						// select all of our parent products for the created child product
-						/*string statement4 = string.Format("WITH RECURSIVE cte ( ppid, cpid, pl ) AS ( SELECT parent.id, child.id, path_length FROM consists_of JOIN product AS parent ON consists_of.parent_product_id = parent.id JOIN product AS child ON consists_of.child_product_id = child.id WHERE child.id = {0} UNION ALL SELECT parent.id, child.id, path_length FROM consists_of JOIN product AS parent ON consists_of.parent_product_id = parent.id JOIN product AS child ON consists_of.child_product_id = child.id JOIN cte ON cte.ppid = child.id WHERE consists_of.child_product_id <> consists_of.parent_product_id ) SELECT GROUP_CONCAT(DISTINCT concat(ppid, '; ', pl) ORDER BY ppid DESC SEPARATOR ',') AS ids FROM cte", childProductId);
-						MySqlCommand com4 = new MySqlCommand(statement4, c);
-						string list = (string) com4.ExecuteScalar();
-						List<string> result = list.Split(',').ToList();
-						foreach (string r in result)
-						{
-							ids.Add(Int32.Parse(r.Split(";").ToArray()[0]));
-							pathlengths.Add(Int32.Parse(r.Split(";").ToArray()[1]));
-						}*/
-
 						// skip the first two id's, because they the first one is referencing themselves, and the second one was already inserted before (initial parent > child relation)
 						for (int k = 2; k < ids.Count; k++)
 						{
 							// inserto into hierarchy
 							string statement5 = string.Format("INSERT INTO consists_of(parent_product_id, child_product_id, path_length) VALUES(" + ids[k] + "," + childProductId + ", " + (pathlengths[k] + 1) +");");
-							//Console.WriteLine("Depth: " + k);
-							// Console.WriteLine("Inserting: " + productIds[k]);
 							MySqlCommand com5 = new MySqlCommand(statement5, c);
 							com5.ExecuteNonQuery();
 						}

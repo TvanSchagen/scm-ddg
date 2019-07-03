@@ -88,6 +88,7 @@ namespace DummyDataGenerator
 			{
 				MySqlCommand com = InsertOrganization(true, i);
 				com.ExecuteNonQuery();
+				// add the inserted primary keys to a list
 				result.Add((int)com.LastInsertedId);
 			}
 			watch.Stop();
@@ -96,18 +97,19 @@ namespace DummyDataGenerator
 		}
 
 		/// <summary>
-		/// Generatea a set number of organizations to be used during the tree generation
+		/// Generate a set number of locations to be used during the tree generation
 		/// </summary>
-		/// <param name="organizations">The number of organiations</param>
-		/// <returns>a list of generated organization ids</returns>
-		protected int[] GenerateOrganizations(int organizations)
+		/// <param name="organizations">The number of locations</param>
+		/// <returns>a list of generated locations ids</returns>
+		protected int[] GenerateOrganizations(int numberOfOrganizations)
 		{
 			List<int> result = new List<int>();
 			var watch = System.Diagnostics.Stopwatch.StartNew();
-			for (int i = 0; i < organizations; i++)
+			for (int i = 0; i < numberOfOrganizations; i++)
 			{
 				MySqlCommand com = InsertOrganization(false, i);
 				com.ExecuteNonQuery();
+				// add the inserted primary keys to a list
 				result.Add((int)com.LastInsertedId);
 			}
 			watch.Stop();
@@ -120,14 +122,15 @@ namespace DummyDataGenerator
 		/// </summary>
 		/// <param name="activites">The number of activities to be generated</param>
 		/// <returns>a list of generated activity ids</returns>
-		protected int[] GenerateActivities(int activites)
+		protected int[] GenerateActivities(int numberOfActivites)
 		{
 			List<int> result = new List<int>();
 			var watch = System.Diagnostics.Stopwatch.StartNew();
-			for (int i = 0; i < activites; i++)
+			for (int i = 0; i < numberOfActivites; i++)
 			{
 				MySqlCommand com = InsertActivity(i);
 				com.ExecuteNonQuery();
+				// add the inserted primary keys to a list
 				result.Add((int)com.LastInsertedId);
 			}
 			watch.Stop();
@@ -148,6 +151,7 @@ namespace DummyDataGenerator
 			{
 				MySqlCommand com = InsertLocation(i);
 				com.ExecuteNonQuery();
+				// add the inserted primary keys to a list
 				result.Add((int) com.LastInsertedId);
 			}
 			watch.Stop();
@@ -156,15 +160,17 @@ namespace DummyDataGenerator
 		}
 
 		/// <summary>
-		/// Generates the product trees for specified organizations
+		/// Generates all of the product trees necessary (amount of top level suppliers * amount of products) 
+		/// starts with the top level products, and then proceeds with all branches in the tree
 		/// </summary>
 		/// <param name="organizationIdentifiers">The id's of the top level organizations</param>
 		/// <param name="productsPerSupplier">The number of products each supplier should get</param>
-		/// <param name="depth">The depth of each chain</param>
+		/// <param name="depth">The depth of each chain (in how many branches does each product split up)</param>
 		/// <param name="breadthPerLevel">The breadth of each chain per level; the number of products to generate for the product above</param>
 		private void GenerateProductTrees(int[] organizationIdentifiers, int productsPerSupplier, int depth, int breadthPerLevel)
 		{
 			var watchTotal = System.Diagnostics.Stopwatch.StartNew();
+
 			// for each top level supplier
 			for (int i = 0; i < organizationIdentifiers.Length; i++)
 			{
@@ -176,32 +182,32 @@ namespace DummyDataGenerator
 					var watch = System.Diagnostics.Stopwatch.StartNew();
 
 					// generate the top level product
-
-					//string statement = "INSERT INTO product(name) VALUES(" + "'Top Level Product #o" + (i + 1) + "-p" + (j + 1) + "');";
 					MySqlCommand com = InsertProduct(true, i * productsPerSupplier + j);
 					com.ExecuteNonQuery();
+					// and get the primary key back
 					int topLevelId = (int) com.LastInsertedId;
 
-					// generate supplies relation
+					// generate the supplies relation for the top level supplier
 					string statement = "INSERT INTO supplies(organization_id, product_id, activity_id, location_id) VALUES(" + organizationIdentifiers[i] + ", " + topLevelId + ", " + (i+1) + ", " + (i+1) +")";
 					MySqlCommand com2 = new MySqlCommand(statement, connector.Connection);
 					com2.ExecuteNonQuery();
 
 					List<int> previousResults = new List<int>();
-					// for the depth of the chain
+
+					// for each level in the depth of the chain
 					for (int k = 0; k < depth; k++)
 					{
 						// in the first pass, generate the products for our top level product
 						if (k == 0)
 						{
 							previousResults.Add(topLevelId);
-							previousResults = GenerateProductRowAndRelations(i, k + 1, previousResults, breadthPerLevel);
+							previousResults = GenerateProductRowAndRelations(previousResults, breadthPerLevel);
 
 						}
 						// in subsequent passes, take the previous row of products and generate a new underlying row for all of them
 						else
 						{
-							previousResults = GenerateProductRowAndRelations(i, k + 1, previousResults, breadthPerLevel);
+							previousResults = GenerateProductRowAndRelations(previousResults, breadthPerLevel);
 						}
 
 					}
@@ -215,13 +221,12 @@ namespace DummyDataGenerator
 		}
 
 		/// <summary>
-		/// Adds a single row to a single product hierarchy
+		/// Generates a single row of products for the tree, given the list of parent product ids
 		/// </summary>
-		/// <param name="chainId">an identifier for a chain, to more clearly identify the products associated to this chain in the database</param>
 		/// <param name="parentProductIdentifiers">the list of parent products for which a number of child products has to be generated</param>
 		/// <param name="breadthPerLevel">the number of child products that have to be generated per parent product</param>
 		/// <returns>a list of the id's of the child products that have been created</returns>
-		private List<int> GenerateProductRowAndRelations(int chainId, int depth, List<int> parentProductIdentifiers, int breadthPerLevel)
+		private List<int> GenerateProductRowAndRelations(List<int> parentProductIdentifiers, int breadthPerLevel)
 		{
 			List<int> childProductsCreated = new List<int>();
 			int i = 0;
@@ -230,8 +235,7 @@ namespace DummyDataGenerator
 			{
 				for (int j = 0; j < breadthPerLevel; j++)
 				{
-					// first insert the product
-					//string statement = "INSERT INTO product(name) VALUES(" + "'Product #c" + (chainId + 1) + "-d" + depth + "-p" + (i + 1) + "-b" + (j + 1) + "');";
+					// first, insert the new product
 					MySqlCommand com = InsertProduct(false, item * 2 + j);
 					com.ExecuteNonQuery();
 					int childProductId = (int) com.LastInsertedId;
@@ -251,8 +255,10 @@ namespace DummyDataGenerator
 		/// Adds organizations and activities to all the products in the database
 		/// </summary>
 		/// <param name="numberOfOrganizations">the total number of organizations specified</param>
-		/// <param name="numberOfActivites">the total number of activities specified</param>
-		/// <param name="numberOfProducts">the total number of products specified</param>
+		/// <param name="numberOfTopLevelOrganizations">the total number of activities specified</param>
+		/// <param name="numberOfActivities">the total number of products specified</param>
+		/// <param name="chainDepth">the chain depth specified</param>
+		/// <param name="chainBreadth">the chain breadth specified</param>
 		protected void AddOrganizationsAndActivitiesToProductTree(int numberOfOrganizations, int numberOfTopLevelOrganizations, int numberOfActivities, int chainDepth, int chainBreadth)
 		{
 			var watch = System.Diagnostics.Stopwatch.StartNew();
@@ -275,6 +281,7 @@ namespace DummyDataGenerator
 			{
 				// first, check if the product inserted isn't a top level product by calculating the number of products in each individual product chain
 				double skip = Math.Pow(chainBreadth, chainDepth + 1) - 1;
+				// if it's the first one, skip the product
 				if (i % skip == 0)
 				{
 					Logger.Debug("Skipping product: " + (i + 1));
@@ -284,7 +291,7 @@ namespace DummyDataGenerator
 					// if not, insert the product into the supplies table
 					string statement2 = string.Format("INSERT INTO supplies(organization_id, activity_id, product_id, location_id) VALUES({0}, {1}, {2}, {3});",
 						// add an offset of the toplevel suppliers, which are added first to the database, then modulo if the n.o. products outnumbers the n.o. organizations
-						(i % numberOfOrganizations) + numberOfTopLevelOrganizations + 1, // numberOfOrganizations + 1 + numberOfTopLevelOrganizations,
+						(i % numberOfOrganizations) + numberOfTopLevelOrganizations + 1,
 						// modulo of the n.o.products outnumbers the n.o. activities
 						i % numberOfActivities + 1,
 						// use the iterator as the product id
@@ -295,14 +302,8 @@ namespace DummyDataGenerator
 					com2.ExecuteNonQuery();
 				}
 			}
-
 			watch.Stop();
 			Logger.Info("Took " + watch.ElapsedMilliseconds + "ms " + "(" + (watch.ElapsedMilliseconds / 1000) + "s) to add organizations and activities to the product tree");
-		}
-
-		protected void AddLocations()
-		{
-
 		}
 
 		/// <summary>
@@ -334,7 +335,7 @@ namespace DummyDataGenerator
 			com2.ExecuteNonQuery();
 			Logger.Debug("Added metadata to the database");
 
-			// commit changes
+			// finally, commit the changes to write them to disk in the MySQL database
 			string statement3 = "COMMIT;";
 			MySqlCommand com3 = new MySqlCommand(statement3, connector.Connection);
 			com3.ExecuteNonQuery();

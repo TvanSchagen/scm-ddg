@@ -30,16 +30,16 @@ namespace DummyDataGenerator.Connectors
 			if (Connection == null)
 			{
 				SqlConnectionStringBuilder builder = new SqlConnectionStringBuilder();
-				builder.DataSource = "10.0.10.136";
-				builder.UserID = "SA";
-				builder.Password = "SQLServer2019";
-				builder.InitialCatalog = "master";
+				builder.DataSource = Env.GetString("SQLSERVER_HOST");
+				builder.UserID = Env.GetString("SQLSERVER_USER");
+				builder.Password = Env.GetString("SQLSERVER_PW");
+				builder.InitialCatalog = Env.GetString("SQLSERVER_DB");
 
 				try
 				{
 					_connection = new SqlConnection(builder.ConnectionString);
 					_connection.Open();
-					Logger.Info("Created connection to SQL Server @ " + "10.0.10.136");
+					Logger.Info("Created connection to SQL Server @ " + Env.GetString("SQLSERVER_HOST"));
 					Logger.Debug("State: " + _connection.State.ToString());
 				}
 				catch (SqlException e)
@@ -54,7 +54,7 @@ namespace DummyDataGenerator.Connectors
 			try
 			{
 				_connection?.Close();
-				Logger.Info("Closed connection to SQL Server @ " + "10.0.10.136");
+				Logger.Info("Closed connection to SQL Server @ " + Env.GetString("SQLSERVER_HOST"));
 			}
 			catch (SqlException e)
 			{

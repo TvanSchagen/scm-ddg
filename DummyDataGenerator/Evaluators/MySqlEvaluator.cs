@@ -22,6 +22,9 @@ namespace DummyDataGenerator.Evaluators
 		protected List<string> databases = new List<string>();
 		protected List<string> queries = new List<string>();
 
+		/// <summary>
+		/// Runs the performance evaluator for all added databases and queries, and outputs a file with the results
+		/// </summary>
 		public void Execute()
 		{
 			AddDatabases();
@@ -43,17 +46,16 @@ namespace DummyDataGenerator.Evaluators
 			WriteOutputToFile("mysql_eval.csv");
 		}
 
+		// add databases you want to evaluate here
 		private void AddDatabases()
 		{
-			databases.Add("v2_scm_al_breadth2_depth2");
-			databases.Add("v2_scm_al_breadth2_depth4");
-			databases.Add("v2_scm_al_breadth2_depth6");
-			databases.Add("v2_scm_al_breadth2_depth8");
-			databases.Add("v2_scm_al_breadth2_depth10");
-			databases.Add("v2_scm_al_breadth2_depth12");
-			databases.Add("v2_scm_al_breadth2_depth14");
+			databases.Add("scm_al_b2_d10");
 		}
 
+		/// <summary>
+		/// Reads all .sql files from the directory and adds them to the list
+		/// </summary>
+		#warning due to limitations (of query length) of the MySQL performance schema, q<number> must be contained somewhere in the query in order to recognize it as this particular query
 		private void AddQueries()
 		{
 			string path = @"../../../Queries/SQL/Adjacency List/";
@@ -72,6 +74,10 @@ namespace DummyDataGenerator.Evaluators
 			}
 		}
 
+		/// <summary>
+		/// Returns the size of the specified database in megabytes
+		/// </summary>
+		/// <param name="database">The name of the database</param>
 		private void CaptureDatabaseSize(string database)
 		{
 			string statement = string.Format("USE {0}; SELECT sum(round(((data_length + index_length) / 1024 / 1024), 2))  as 'size_mb' FROM information_schema.TABLES WHERE table_schema = '{0}'", database);
@@ -80,6 +86,10 @@ namespace DummyDataGenerator.Evaluators
 			output += database + " (" + size + " MB) ";
 		}
 
+		/// <summary>
+		/// Enabled the performance schema on MySQL in order to capture the query response times
+		/// </summary>
+		/// <param name="database">The name of the database</param>
 		private void EnablePerformanceSchema(string database)
 		{
 			Logger.Debug("Enabling performance schema");
@@ -100,6 +110,13 @@ namespace DummyDataGenerator.Evaluators
 			command.ExecuteNonQuery();
 		}
 
+		/// <summary>
+		/// Executes a query on the database a specified number of times
+		/// </summary>
+		/// <param name="queryNumber">Number of the query</param>
+		/// <param name="query">The actual SQL code to be executed</param>
+		/// <param name="repetitions">Number of times the query is executed</param>
+		/// <param name="database"></param>
 		private void ExecuteQuery(int queryNumber, string query, int repetitions, string database)
 		{
 			Logger.Info("Executing query: " + queryNumber + " " + NUMBER_OF_REPETITIONS + " times on database: " + database);
@@ -111,6 +128,13 @@ namespace DummyDataGenerator.Evaluators
 			}
 		}
 
+		/// <summary>
+		/// Gets the result from the enabled performance schema for the specified query, using 'q' and the number of the query (example 'q1')
+		/// </summary>
+		/// <param name="queryNumber"></param>
+		/// <param name="query"></param>
+		/// <param name="repetitions"></param>
+		#warning due to limitations (of query length) of the MySQL performance schema, q<number> must be contained somewhere in the query in order to recognize it as this particular query
 		private void RetrieveResult(int queryNumber, string query, int repetitions)
 		{
 			Logger.Info("Retrieving results for query: " + (queryNumber));
@@ -148,6 +172,8 @@ namespace DummyDataGenerator.Evaluators
 
 			Logger.Info("Average execution time: " + totaExecutionTime / repetitions);
 
+			// gets individual response times
+
 			/*foreach (int i in eventIds)
 			{
 				string statement2 = string.Format("SELECT event_name AS Stage, TRUNCATE(TIMER_WAIT/1000000000000,6) AS Duration FROM performance_schema.events_stages_history_long WHERE NESTING_EVENT_ID = {0}", i);
@@ -184,6 +210,10 @@ namespace DummyDataGenerator.Evaluators
 			connector.Close();
 		}
 
+		/// <summary>
+		/// Disables the performance schema for the specified database
+		/// </summary>
+		/// <param name="database">Name of the database</param>
 		private void DisablePerformanceSchema(string database)
 		{
 			Logger.Debug("Disabling performance schema");
@@ -197,6 +227,9 @@ namespace DummyDataGenerator.Evaluators
 			command.ExecuteNonQuery();
 		}
 
+		/// <summary>
+		/// Adds headers to the output file based on the no. of repetitions
+		/// </summary>
 		private void AddHeadersToOutput()
 		{
 			Logger.Debug("Adding headers to file..");
@@ -208,6 +241,10 @@ namespace DummyDataGenerator.Evaluators
 			output += "\n";
 		}
 
+		/// <summary>
+		/// Writes the results to a file in csv format
+		/// </summary>
+		/// <param name="fileName"></param>
 		private void WriteOutputToFile(string fileName)
 		{
 			Logger.Debug("Writing output to file..");

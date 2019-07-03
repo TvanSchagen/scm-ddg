@@ -14,16 +14,19 @@ namespace DummyDataGenerator
 
 		Neo4jConnector connector;
 
-        public override void InitializeConnection()
+		/// <summary>
+		/// Initializes the singleton connection
+		/// </summary>
+		public override void InitializeConnection()
         {
 			connector = Neo4jConnector.Instance();
         }
 
 		/// <summary>
-		/// 
+		/// Generates the data with the specified parameters of the configuration
 		/// </summary>
-		/// <param name="config"></param>
-        public override void GenerateData(Configuration config, bool allowMultipleThreads)
+		/// <param name="config">The configuration that holds the paremeters for the data</param>
+		public override void GenerateData(Configuration config, bool allowMultipleThreads)
         {
 			RefreshSchema();
 			int[] topLevelOrganizations = GenerateTopLevelOrganizations(config.NumberOfTopLevelSuppliers);
@@ -44,8 +47,9 @@ namespace DummyDataGenerator
 		}
 
 		/// <summary>
-		/// 
+		/// Deletes all nodes and relationships from the connected graph
 		/// </summary>
+		#warning There is no option for dropping a database in Neo4j, when the graph is very large, this way of deleting can take a long time
 		private void RefreshSchema()
 		{
 			var watch = System.Diagnostics.Stopwatch.StartNew();
@@ -59,10 +63,10 @@ namespace DummyDataGenerator
 		}
 
 		/// <summary>
-		/// 
+		/// Generates a set number of top level organizations; organizations that do not supply any others
 		/// </summary>
-		/// <param name="organizations"></param>
-		/// <returns></returns>
+		/// <param name="organizations">The number of organiations</param>
+		/// <returns>a list of generated organization ids</returns>
 		private int[] GenerateTopLevelOrganizations(int organizations)
 		{
 			var watch = System.Diagnostics.Stopwatch.StartNew();
@@ -84,10 +88,10 @@ namespace DummyDataGenerator
 		}
 
 		/// <summary>
-		/// 
+		/// Generates a set number of organizations; they can be located anwywhere in the chain
 		/// </summary>
-		/// <param name="organizations"></param>
-		/// <returns></returns>
+		/// <param name="organizations">The number of organiations</param>
+		/// <returns>a list of generated organization ids</returns>
 		private int[] GenerateOrganizations(int organizations)
 		{
 			List<int> result = new List<int>();
@@ -108,6 +112,11 @@ namespace DummyDataGenerator
 			return result.ToArray();
 		}
 
+		/// <summary>
+		/// Generate a set number of locations to be used during the tree generation
+		/// </summary>
+		/// <param name="organizations">The number of locations</param>
+		/// <returns>a list of generated locations ids</returns>
 		private int[] GenerateLocations(int locations)
 		{
 			List<int> result = new List<int>();
@@ -128,6 +137,9 @@ namespace DummyDataGenerator
 			return result.ToArray();
 		}
 
+		/// <summary>
+		/// Used to pass data along to a thread, when in multi threaded mode
+		/// </summary>
 		struct ProductTreeData
 		{
 			public ProductTreeData(int org, int productsPerSupplier, int depth, int breadthPerLevel, int orgIter, int prodIter, int locationId)
@@ -150,6 +162,15 @@ namespace DummyDataGenerator
 			public int locationId;
 		}
 
+		/// <summary>
+		/// Multi threaded way to generate all of the product trees necessary (amount of top level suppliers * amount of products) 
+		/// starts with the top level products, and then proceeds with all branches in the tree
+		/// </summary>
+		/// <param name="organizationIds">The id's of the top level organizations</param>
+		/// <param name="productsPerSupplier">The number of products each supplier should get</param>
+		/// <param name="depth">The depth of each chain (in how many branches does each product split up)</param>
+		/// <param name="breadthPerLevel">The breadth of each chain per level; the number of products to generate for the product above</param>
+		/// <param name="locations">The location ids to be used</param>
 		private void mt_GenerateProductTrees(int[] organizationIds, int productsPerSupplier, int depth, int breadthPerLevel, int[] locations)
 		{
 			var watch = System.Diagnostics.Stopwatch.StartNew();
@@ -180,6 +201,10 @@ namespace DummyDataGenerator
 
 		}
 
+		/// <summary>
+		/// Generates one product tree, to be used with a single thread of the multi-threaded way of generating product trees 
+		/// </summary>
+		/// <param name="data">ProductTree data</param>
 		private void mt_GenerateProductTree(object data)
 		{
 			ProductTreeData d = (ProductTreeData) data;
@@ -218,25 +243,27 @@ namespace DummyDataGenerator
 				if (k == 0)
 				{
 					previousResults.Add(topLevelId);
-					previousResults = GenerateProductRowAndRelations(d.orgIter, previousResults.ToArray(), d.breadthPerLevel);
+					previousResults = GenerateProductRowAndRelations(previousResults.ToArray(), d.breadthPerLevel);
 
 				}
 				// in subsequent passes, take the previous row of products and generate a new underlying row for all of them
 				else
 				{
-					previousResults = GenerateProductRowAndRelations(d.orgIter, previousResults.ToArray(), d.breadthPerLevel);
+					previousResults = GenerateProductRowAndRelations(previousResults.ToArray(), d.breadthPerLevel);
 				}
 
 			}
 		}
 
 		/// <summary>
-		/// 
+		/// Generates all of the product trees necessary (amount of top level suppliers * amount of products) 
+		/// starts with the top level products, and then proceeds with all branches in the tree
 		/// </summary>
-		/// <param name="organizationIdentifiers"></param>
-		/// <param name="productsPerSupplier"></param>
-		/// <param name="depth"></param>
-		/// <param name="breadthPerLevel"></param>
+		/// <param name="organizationIdentifiers">The id's of the top level organizations</param>
+		/// <param name="productsPerSupplier">The number of products each supplier should get</param>
+		/// <param name="depth">The depth of each chain (in how many branches does each product split up)</param>
+		/// <param name="breadthPerLevel">The breadth of each chain per level; the number of products to generate for the product above</param>
+		/// <param name="locations">The location ids to be used</param>
 		private void GenerateProductTrees(int[] organizationIdentifiers, int productsPerSupplier, int depth, int breadthPerLevel, int[] locationIdentifiers)
 		{
 			var watchTotal = System.Diagnostics.Stopwatch.StartNew();
@@ -285,13 +312,13 @@ namespace DummyDataGenerator
 						if (k == 0)
 						{
 							previousResults.Add(topLevelId);
-							previousResults = GenerateProductRowAndRelations(i, previousResults.ToArray(), breadthPerLevel);
+							previousResults = GenerateProductRowAndRelations(previousResults.ToArray(), breadthPerLevel);
 
 						}
 						// in subsequent passes, take the previous row of products and generate a new underlying row for all of them
 						else
 						{
-							previousResults = GenerateProductRowAndRelations(i, previousResults.ToArray(), breadthPerLevel);
+							previousResults = GenerateProductRowAndRelations(previousResults.ToArray(), breadthPerLevel);
 						}
 
 					}
@@ -305,13 +332,12 @@ namespace DummyDataGenerator
 		}
 
 		/// <summary>
-		/// 
+		/// Generates a single row of products for the tree, given the list of parent product ids
 		/// </summary>
-		/// <param name="chainId"></param>
-		/// <param name="parentProductIdentifiers"></param>
-		/// <param name="breadthPerLevel"></param>
-		/// <returns></returns>
-		private List<int> GenerateProductRowAndRelations(int chainId, int[] parentProductIdentifiers, int breadthPerLevel)
+		/// <param name="parentProductIdentifiers">the list of parent products for which a number of child products has to be generated</param>
+		/// <param name="breadthPerLevel">the number of child products that have to be generated per parent product</param>
+		/// <returns>a list of the id's of the child products that have been created</returns>
+		private List<int> GenerateProductRowAndRelations(int[] parentProductIdentifiers, int breadthPerLevel)
 		{
 			List<int> childProductsCreated = new List<int>();
 
@@ -347,10 +373,13 @@ namespace DummyDataGenerator
 		}
 
 		/// <summary>
-		/// 
+		/// Adds organizations and activities to all the products in the database
 		/// </summary>
-		/// <param name="organizationIds"></param>
-		/// <param name="locationIds"></param>
+		/// <param name="numberOfOrganizations">the total number of organizations specified</param>
+		/// <param name="numberOfTopLevelOrganizations">the total number of activities specified</param>
+		/// <param name="numberOfActivities">the total number of products specified</param>
+		/// <param name="chainDepth">the chain depth specified</param>
+		/// <param name="chainBreadth">the chain breadth specified</param>
 		private void AddOrganizationsAndActivitiesToProductTree(int[] organizationIds, int[] locationIds)
 		{
 			var watch = System.Diagnostics.Stopwatch.StartNew();

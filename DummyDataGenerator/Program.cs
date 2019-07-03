@@ -35,7 +35,7 @@ namespace DummyDataGenerator
 				using (FileStream fs = File.Create(envPath))
 				{
 					// adds the keys to the file
-					Byte[] info = new UTF8Encoding(true).GetBytes("MYSQL_HOST =\nMYSQL_DB = \nMYSQL_USER = \nMYSQL_PW = \nNEO4J_HOST = \nNEO4J_USER = \nNEO4J_PW =");
+					Byte[] info = new UTF8Encoding(true).GetBytes("MYSQL_HOST =\nMYSQL_DB = \nMYSQL_USER = \nMYSQL_PW = \nNEO4J_HOST = \nNEO4J_USER = \nNEO4J_PW = \nSQLSERVER_HOST = \nSQLSERVER_USER = \nSQLSERVER_DB = \nSQLSERVER_PW = ");
 					fs.Write(info, 0, info.Length);
 					Logger.Info("Created .env file, please specify connection properties in the file and restart the program");
 				}
