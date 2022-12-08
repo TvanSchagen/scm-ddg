@@ -10,7 +10,7 @@
     <PackageReference Include="DotNetEnv" Version="1.2.0" />
     <PackageReference Include="MySql.Data" Version="8.0.16" />
     <PackageReference Include="Neo4j.Driver" Version="1.7.2" />
-    <PackageReference Include="Newtonsoft.Json" Version="12.0.2" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.2" />
     <PackageReference Include="System.Data.SqlClient" Version="4.6.1" />
   </ItemGroup>
 
